@@ -10,41 +10,114 @@ let numRows = 0, numCols = 0;
 let startRow = 0, startCol = 0;
 let goalRow = 0, goalCol = 0;
 
-/* Load maze definition from a text file */
-async function loadMaze(url) {
-    const res = await fetch(url);
-    if (!res.ok) {
-        throw new Error(`Failed to load maze from ${url}: ${res.status} ${res.statusText}`);
-    }
+const MAZE_LEVELS = {
+    tutorial: {
+        label: "Tutorial maze",
+        url: "mazes/default.txt",
+        rows: 11,
+        columns: 11,
+    },
+    easy: {
+        label: "Easy",
+        url: "mazes/easy_winding.txt",
+        rows: 11,
+        columns: 15,
+    },
+    medium: {
+        label: "Medium",
+        url: "mazes/medium_crossroads.txt",
+        rows: 17,
+        columns: 23,
+    },
+    hard: {
+        label: "Hard",
+        url: "mazes/hard_switchbacks.txt",
+        rows: 25,
+        columns: 31,
+    },
+    expert: {
+        label: "Expert",
+        url: "mazes/expert_archipelago.txt",
+        rows: 29,
+        columns: 39,
+    },
+};
 
-    const text = await res.text();
-    maze = text
+let currentMazeLevel = "tutorial";
+
+function parseMazeText(text) {
+    return text
         .split(/\r?\n/)
-        .filter(line => line.trim().length > 0);
+        .filter(line => line.length > 0);
+}
 
-    if (maze.length === 0) {
-        throw new Error("Maze file is empty");
+function validateMaze(nextMaze) {
+    if (nextMaze.length === 0 || nextMaze[0].length === 0) {
+        throw new Error("Maze is empty");
     }
 
-    numRows = maze.length;
-    numCols = maze[0].length;
+    const columns = nextMaze[0].length;
+    if (nextMaze.some(line => line.length !== columns)) {
+        throw new Error("Maze rows must all have the same length");
+    }
 
-    // Find start and goal positions
-    startRow = startCol = goalRow = goalCol = 0;
-    for (let r = 0; r < numRows; r++) {
-        for (let c = 0; c < numCols; c++) {
-            const ch = maze[r][c];
-            if (ch === "S") {
-                startRow = r;
-                startCol = c;
-            } else if (ch === "G") {
-                goalRow = r;
-                goalCol = c;
+    const allowed = new Set(["#", ".", " ", "S", "G"]);
+    const starts = [];
+    const goals = [];
+
+    nextMaze.forEach((line, row) => {
+        Array.from(line).forEach((character, column) => {
+            if (!allowed.has(character)) {
+                throw new Error(`Unsupported maze character: ${character}`);
+            }
+            if (character === "S") starts.push([row, column]);
+            if (character === "G") goals.push([row, column]);
+        });
+    });
+
+    if (starts.length !== 1 || goals.length !== 1) {
+        throw new Error("Maze must contain exactly one start and one goal");
+    }
+
+    const [start] = starts;
+    const [goal] = goals;
+    const queue = [start];
+    const visited = new Set([start.join(",")]);
+
+    for (let index = 0; index < queue.length; index++) {
+        const [row, column] = queue[index];
+        if (row === goal[0] && column === goal[1]) {
+            return {start, goal};
+        }
+
+        for (const [rowDelta, columnDelta] of [[-1, 0], [0, 1], [1, 0], [0, -1]]) {
+            const nextRow = row + rowDelta;
+            const nextColumn = column + columnDelta;
+            const key = `${nextRow},${nextColumn}`;
+            if (
+                nextRow >= 0 && nextRow < nextMaze.length &&
+                nextColumn >= 0 && nextColumn < columns &&
+                nextMaze[nextRow][nextColumn] !== "#" &&
+                !visited.has(key)
+            ) {
+                visited.add(key);
+                queue.push([nextRow, nextColumn]);
             }
         }
     }
 
-    // Expose maze data to Python
+    throw new Error("Maze has no route from start to goal");
+}
+
+function applyMaze(nextMaze) {
+    const {start, goal} = validateMaze(nextMaze);
+    maze = nextMaze;
+    numRows = maze.length;
+    numCols = maze[0].length;
+    [startRow, startCol] = start;
+    [goalRow, goalCol] = goal;
+
+    // Expose maze data to Python.
     globalThis.JS_MAZE = maze;
     globalThis.JS_MAZE_NUM_ROWS = numRows;
     globalThis.JS_MAZE_NUM_COLS = numCols;
@@ -54,7 +127,17 @@ async function loadMaze(url) {
     globalThis.JS_MAZE_GOAL_COL = goalCol;
 }
 
-await loadMaze("mazes/default.txt");
+/* Load a maze definition from a text file. */
+async function fetchMaze(url) {
+    const res = await fetch(url);
+    if (!res.ok) {
+        throw new Error(`Failed to load maze from ${url}: ${res.status} ${res.statusText}`);
+    }
+
+    return parseMazeText(await res.text());
+}
+
+applyMaze(await fetchMaze(MAZE_LEVELS.tutorial.url));
 
 /*
   Directions used for drawing and for updating the visual
@@ -74,9 +157,17 @@ const ctx = canvas.getContext("2d");
   Compute how large each cell should be so that the entire maze
   fits inside the canvas and is centred.
 */
-let cellSize = Math.min(canvas.width / numCols, canvas.height / numRows);
-let offsetX = (canvas.width - numCols * cellSize) / 2;
-let offsetY = (canvas.height - numRows * cellSize) / 2;
+let cellSize;
+let offsetX;
+let offsetY;
+
+function updateMazeGeometry() {
+    cellSize = Math.min(canvas.width / numCols, canvas.height / numRows);
+    offsetX = (canvas.width - numCols * cellSize) / 2;
+    offsetY = (canvas.height - numRows * cellSize) / 2;
+}
+
+updateMazeGeometry();
 
 /*
   Visual state of the player. This is separate from the logical
@@ -209,6 +300,7 @@ async function playActions(runId) {
 }
 
 let pyodide;
+let pythonReady = false;
 let runCounter = 0;
 
 /*
@@ -243,13 +335,154 @@ const pyodideReadyPromise = (async () => {
       }
     });
 
-    // Load the Python game API file into the interpreter
-    const resp = await fetch(`maze.py?v=${Date.now()}`, {cache: "no-store"});
-    const apiCode = await resp.text();
+    // Load the Python game API and generator into the interpreter.
+    const [apiResponse, generatorResponse] = await Promise.all([
+        fetch(`maze.py?v=${Date.now()}`, {cache: "no-store"}),
+        fetch(`maze_generator.py?v=${Date.now()}`, {cache: "no-store"}),
+    ]);
+    if (!apiResponse.ok) {
+        throw new Error(`Failed to load maze.py: ${apiResponse.status}`);
+    }
+    if (!generatorResponse.ok) {
+        throw new Error(`Failed to load maze_generator.py: ${generatorResponse.status}`);
+    }
+
+    const apiCode = await apiResponse.text();
     await pyodide.runPythonAsync(apiCode);
+
+    const generatorCode = await generatorResponse.text();
+    pyodide.globals.set("PMG_GENERATOR_SOURCE", generatorCode);
+    await pyodide.runPythonAsync(`
+import types as _pmg_types
+PMG_MAZE_GENERATOR = _pmg_types.ModuleType("maze_generator")
+exec(
+    compile(PMG_GENERATOR_SOURCE, "maze_generator.py", "exec"),
+    PMG_MAZE_GENERATOR.__dict__,
+)
+`);
+
+    pythonReady = true;
+    setMazeChangeInProgress(false);
+    setMazeStatus("Tutorial maze loaded.");
+    document.dispatchEvent(new CustomEvent("maze:ready"));
 
     return pyodide;
 })();
+
+pyodideReadyPromise.catch(error => {
+    pythonReady = false;
+    setMazeChangeInProgress(false);
+    setMazeStatus("The Python runtime could not be loaded. Refresh the page to try again.", true);
+    appendOutput(`Unable to start Python: ${error}`);
+});
+
+let mazeChangeCounter = 0;
+
+function setMazeStatus(message, isError = false) {
+    const mazeStatus = document.getElementById("mazeStatus");
+    mazeStatus.textContent = message;
+    mazeStatus.classList.toggle("error", isError);
+}
+
+function setMazeControlsEnabled(enabled) {
+    document.getElementById("mazeSelect").disabled = !enabled;
+    document.getElementById("generateMazeBtn").disabled = !enabled;
+}
+
+function setMazeChangeInProgress(inProgress) {
+    const controlsEnabled = pythonReady && !inProgress;
+    setMazeControlsEnabled(controlsEnabled);
+    document.getElementById("runBtn").disabled = !controlsEnabled;
+    document.getElementById("resetBtn").disabled = !controlsEnabled;
+}
+
+async function activateMaze(nextMaze, level, description) {
+    applyMaze(nextMaze);
+    currentMazeLevel = level;
+    document.getElementById("mazeSelect").value = level;
+
+    runCounter++;
+    updateMazeGeometry();
+    resetVisualState();
+    document.getElementById("output").value = "";
+    await pyodide.runPythonAsync("_sync_maze_from_js()");
+
+    setMazeStatus(description);
+    document.dispatchEvent(new CustomEvent("maze:changed", {
+        detail: {
+            level,
+            rows: numRows,
+            columns: numCols,
+            start: [startRow, startCol],
+            goal: [goalRow, goalCol],
+        }
+    }));
+}
+
+async function loadPresetMaze(level) {
+    const config = MAZE_LEVELS[level];
+    if (!config) return;
+
+    const changeId = ++mazeChangeCounter;
+    setMazeChangeInProgress(true);
+    setMazeStatus(`Loading ${config.label.toLowerCase()}…`);
+
+    try {
+        const [nextMaze] = await Promise.all([
+            fetchMaze(config.url),
+            pyodideReadyPromise,
+        ]);
+        if (changeId !== mazeChangeCounter) return;
+
+        await activateMaze(nextMaze, level, `${config.label} loaded.`);
+    } catch (error) {
+        if (changeId !== mazeChangeCounter) return;
+        setMazeStatus(`Could not load ${config.label.toLowerCase()}.`, true);
+        appendOutput(String(error));
+    } finally {
+        if (changeId === mazeChangeCounter) setMazeChangeInProgress(false);
+    }
+}
+
+async function generateNewMaze(level = currentMazeLevel) {
+    const generatedLevel = level === "tutorial" ? "easy" : level;
+    const config = MAZE_LEVELS[generatedLevel];
+    if (!config) return;
+
+    const changeId = ++mazeChangeCounter;
+    setMazeChangeInProgress(true);
+    setMazeStatus(`Generating a new ${config.label.toLowerCase()} maze…`);
+
+    try {
+        await pyodideReadyPromise;
+        if (changeId !== mazeChangeCounter) return;
+
+        pyodide.globals.set("PMG_GENERATED_ROWS", config.rows);
+        pyodide.globals.set("PMG_GENERATED_COLUMNS", config.columns);
+        const generatedText = await pyodide.runPythonAsync(`
+PMG_MAZE_GENERATOR.maze_to_text(
+    PMG_MAZE_GENERATOR.generate_maze(
+        PMG_GENERATED_ROWS,
+        PMG_GENERATED_COLUMNS,
+        style="perfect",
+    )
+)
+`);
+        if (changeId !== mazeChangeCounter) return;
+
+        await activateMaze(
+            parseMazeText(String(generatedText)),
+            generatedLevel,
+            `New ${config.label.toLowerCase()} maze generated.`,
+        );
+    } catch (error) {
+        if (changeId !== mazeChangeCounter) return;
+        setMazeStatus("Could not generate a new maze.", true);
+        appendOutput(String(error));
+    } finally {
+        if (changeId === mazeChangeCounter) setMazeChangeInProgress(false);
+    }
+}
 
 async function runProgram() {
     // Wait for Pyodide and maze.py to be ready
@@ -262,6 +495,9 @@ async function runProgram() {
     // Increment runCounter so any previous animation loops stop
     runCounter++;
     const thisRun = runCounter;
+    document.dispatchEvent(new CustomEvent("maze:run-start", {
+        detail: {runId: thisRun}
+    }));
 
     // Reset JS visual state
     resetVisualState();
@@ -288,8 +524,13 @@ async function runProgram() {
         appendOutput(formatPyodideError(err));
     }
 
+    const actionTypes = actionQueue.map(action => action.type);
+
     // Animate the recorded actions
     await playActions(thisRun);
+
+    // A newer run or reset has replaced this one.
+    if (thisRun !== runCounter) return;
 
     // Ask Python whether the player reached the goal
     let reached = false;
@@ -305,6 +546,15 @@ async function runProgram() {
     } else if (!hadError) {
         appendOutput("Program finished without reaching goal.");
     }
+
+    document.dispatchEvent(new CustomEvent("maze:run-complete", {
+        detail: {
+            runId: thisRun,
+            reached,
+            hadError,
+            actions: actionTypes
+        }
+    }));
 }
 
 function formatPyodideError(err) {
@@ -332,7 +582,10 @@ function formatPyodideError(err) {
 
 /* UI wiring and defaults */
 
-document.getElementById("code").value = `# Enter your python code here`;
+const initialCodeBox = document.getElementById("code");
+if (!initialCodeBox.value.trim()) {
+    initialCodeBox.value = `# Enter your python code here`;
+}
 
 // Run button
 document.getElementById("runBtn").addEventListener("click", () => {
@@ -361,6 +614,29 @@ document.getElementById("sampleBtn").addEventListener("click", async () => {
   code.dispatchEvent(new Event("input")); // refresh line numbers
   code.focus();
 });
+
+document.getElementById("mazeSelect").addEventListener("change", event => {
+    loadPresetMaze(event.target.value);
+});
+
+document.getElementById("generateMazeBtn").addEventListener("click", () => {
+    generateNewMaze();
+});
+
+// Tutorials always use the known fixed maze. Completing a tutorial starts an
+// independent exercise on a newly generated easy maze.
+document.addEventListener("tutorial:start", () => {
+    if (currentMazeLevel !== "tutorial") loadPresetMaze("tutorial");
+});
+
+document.addEventListener("tutorial:complete", () => {
+    generateNewMaze("easy");
+});
+
+globalThis.mazeGame = {
+    loadPreset: loadPresetMaze,
+    generate: generateNewMaze,
+};
 
 // Initial draw when the page loads
 resetVisualState();

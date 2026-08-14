@@ -32,6 +32,8 @@ body {
 #mazeCanvas {
     border: 1px solid #999;
     background: #ddd;
+    max-width: 100%;
+    height: auto;
 }
 
 #buttons {
@@ -48,6 +50,48 @@ body {
     border: 1px solid #555;
     background: #f5f5f5;
     cursor: pointer;
+}
+
+#mazeControls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+#mazeControls select,
+#mazeControls button {
+    padding: 6px 10px;
+    border: 1px solid #555;
+    border-radius: 4px;
+    background: #f5f5f5;
+    color: #1f252a;
+    font: inherit;
+}
+
+#mazeControls button {
+    cursor: pointer;
+}
+
+#mazeControls select:disabled,
+#mazeControls button:disabled {
+    cursor: wait;
+    opacity: 0.65;
+}
+
+#mazeStatus {
+    min-height: 1.4em;
+    margin: 6px 0 0;
+    color: #4c5963;
+    font-size: 13px;
+    text-align: center;
+}
+
+#mazeStatus.error {
+    color: #9d2d26;
+    font-weight: 600;
 }
 
 button:hover {
@@ -256,5 +300,269 @@ textarea {
         padding-left: 0;
         border-top: 1px solid #dddddd;
         padding-top: 10px;
+    }
+}
+
+/* Tutorial selection and contextual guidance */
+
+.tutorial-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    margin-top: 12px;
+    border: 1px solid #c7d3df;
+    border-radius: 6px;
+    background: #f4f8fb;
+}
+
+.tutorial-toolbar[hidden] {
+    display: none;
+}
+
+.tutorial-toolbar p {
+    margin: 0;
+    font-size: 14px;
+}
+
+.tutorial-toolbar-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.tutorial-toolbar button,
+.tutorial-selector button,
+.tutorial-coachmark button {
+    padding: 7px 11px;
+    border: 1px solid #56616b;
+    border-radius: 4px;
+    background: #ffffff;
+    color: #1f252a;
+    cursor: pointer;
+    font: inherit;
+}
+
+.tutorial-toolbar button:hover,
+.tutorial-selector button:hover,
+.tutorial-coachmark button:hover {
+    background: #eef2f5;
+}
+
+.tutorial-toolbar button:focus-visible,
+.tutorial-selector button:focus-visible,
+.tutorial-coachmark button:focus-visible,
+.tutorial-highlight:focus-visible {
+    outline: 3px solid #1769aa;
+    outline-offset: 2px;
+}
+
+.tutorial-selector {
+    width: min(720px, calc(100vw - 32px));
+    max-height: calc(100vh - 32px);
+    padding: 0;
+    border: 1px solid #6c7780;
+    border-radius: 8px;
+    box-shadow: 0 12px 38px rgba(0, 0, 0, 0.3);
+    color: #1d2328;
+}
+
+.tutorial-selector::backdrop {
+    background: rgba(22, 28, 34, 0.68);
+}
+
+.tutorial-selector-panel {
+    padding: 22px;
+}
+
+.tutorial-selector h2 {
+    margin: 0 0 8px;
+    font-size: 24px;
+}
+
+.tutorial-selector p {
+    margin: 0;
+    line-height: 1.5;
+}
+
+.tutorial-options {
+    display: grid;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.tutorial-option {
+    display: block;
+    width: 100%;
+    padding: 14px 16px !important;
+    text-align: left;
+}
+
+.tutorial-option-title,
+.tutorial-option-description {
+    display: block;
+}
+
+.tutorial-option-title {
+    margin-bottom: 5px;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.tutorial-option-description {
+    color: #414b53;
+    line-height: 1.45;
+}
+
+.tutorial-selector-close {
+    margin-top: 16px;
+}
+
+.tutorial-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 900;
+    background: rgba(20, 25, 30, 0.64);
+}
+
+.tutorial-backdrop[hidden],
+.tutorial-coachmark[hidden] {
+    display: none;
+}
+
+.tutorial-highlight {
+    position: relative !important;
+    z-index: 901 !important;
+    outline: 4px solid #ffffff;
+    outline-offset: 4px;
+    box-shadow: 0 0 0 7px #1769aa;
+}
+
+.tutorial-coachmark {
+    position: fixed;
+    z-index: 902;
+    width: min(390px, calc(100vw - 24px));
+    box-sizing: border-box;
+    padding: 16px;
+    border: 1px solid #59636c;
+    border-radius: 7px;
+    background: #ffffff;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.32);
+}
+
+.tutorial-step-count {
+    margin: 0 0 5px;
+    color: #52606b;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.tutorial-coachmark h2 {
+    margin: 0 0 8px;
+    font-size: 19px;
+}
+
+.tutorial-step-body {
+    line-height: 1.45;
+}
+
+.tutorial-step-body p {
+    margin: 0 0 8px;
+}
+
+.tutorial-step-body p:last-child {
+    margin-bottom: 0;
+}
+
+.tutorial-step-body ul {
+    margin: 7px 0 7px 20px;
+    padding: 0;
+}
+
+.tutorial-step-body code {
+    padding: 1px 4px;
+    border-radius: 3px;
+    background: #edf1f4;
+    font-family: "Fira Code", Consolas, monospace;
+}
+
+.tutorial-feedback {
+    margin: 12px 0 0;
+    padding: 8px 10px;
+    border-left: 4px solid #8a6500;
+    background: #fff6d8;
+    line-height: 1.4;
+}
+
+.tutorial-feedback[data-state="success"] {
+    border-left-color: #27733b;
+    background: #e9f7ec;
+}
+
+.tutorial-feedback[data-state="error"] {
+    border-left-color: #a33a32;
+    background: #fbeceb;
+}
+
+.tutorial-code-action {
+    margin-top: 12px;
+}
+
+.tutorial-navigation {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 15px;
+    padding-top: 12px;
+    border-top: 1px solid #d7dce0;
+}
+
+.tutorial-navigation-spacer {
+    flex: 1;
+}
+
+#tutorialNextBtn {
+    border-color: #155f96;
+    background: #1769aa;
+    color: #ffffff;
+}
+
+#tutorialNextBtn:hover {
+    background: #11598f;
+}
+
+#tutorialNextBtn:disabled {
+    border-color: #8a949c;
+    background: #8a949c;
+    cursor: not-allowed;
+}
+
+@media (max-width: 600px) {
+    .tutorial-toolbar {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .tutorial-selector-panel {
+        padding: 17px;
+    }
+
+    .tutorial-coachmark {
+        right: 12px !important;
+        bottom: 12px !important;
+        left: 12px !important;
+        top: auto !important;
+        width: auto;
+        max-height: 52vh;
+        overflow-y: auto;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
     }
 }

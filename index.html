@@ -3,6 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Python Maze Solver</title>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -10,8 +11,16 @@
 <body>
 <div id="app">
     <h1>Python Maze Solver</h1>
-    <h2>Code your own maze solver in Python! Scroll down for guides and
-        instructions.</h2>
+    <h2>Write Python code to guide the triangle through the maze. Select a
+        tutorial level to begin.</h2>
+
+    <div class="tutorial-toolbar" id="tutorialToolbar" hidden>
+        <p id="tutorialStatus" aria-live="polite"></p>
+        <div class="tutorial-toolbar-actions">
+            <button id="restartTutorialBtn" type="button">Restart tutorial</button>
+            <button id="changeTutorialBtn" type="button">Change tutorial</button>
+        </div>
+    </div>
 
     <!--
       Top row: the maze canvas and the control buttons.
@@ -22,13 +31,30 @@
         <canvas id="mazeCanvas" width="480" height="480"></canvas>
 
         <div id="buttons">
-            <button id="runBtn">Run program</button>
-            <button id="resetBtn">Reset position</button>
+            <button id="runBtn" disabled>Run program</button>
+            <button id="resetBtn" disabled>Reset position</button>
             <label id="speedLabel">
                 Speed:
                 <input type="range" id="speed" min="1" max="200" value="100">
             </label>
         </div>
+
+        <div id="mazeControls">
+            <label for="mazeSelect">Maze:</label>
+            <select id="mazeSelect" disabled>
+                <option value="tutorial">Tutorial maze</option>
+                <option value="easy">Easy</option>
+                <option value="medium">Medium</option>
+                <option value="hard">Hard</option>
+                <option value="expert">Expert</option>
+            </select>
+            <button id="generateMazeBtn" type="button" disabled>
+                Generate new maze
+            </button>
+        </div>
+        <p id="mazeStatus" role="status" aria-live="polite">
+            Preparing maze controls…
+        </p>
     </div>
 
     <!--
@@ -59,7 +85,7 @@
     -->
     <div class="row" id="bottom-row">
         <div class="tabs" id="help-tabs">
-            <div class="tabs-nav">
+            <div class="tabs-nav" id="referenceTabs">
                 <button type="button" data-tab="maze" class="active">Maze Instructions
                 </button>
                 <button type="button" data-tab="guide">Beginners Guide</button>
@@ -70,9 +96,9 @@
                     <div class="tab-section">
                         <p><strong>Goal</strong></p>
                         <p>
-                            Guide the blue triangle from the start (top left) to the
-                            green goal square (bottom right) without walking into walls
-                            using Python code.
+                            Guide the blue triangle from its starting square to the
+                            green goal square without walking into walls using Python
+                            code.
                         </p>
 
                         <p><strong>Controls</strong></p>
@@ -442,6 +468,78 @@ while not at_goal():
     </div>
 </div>
 
+<dialog id="tutorialSelector" class="tutorial-selector"
+        aria-labelledby="tutorialSelectorTitle"
+        aria-describedby="tutorialSelectorDescription">
+    <div class="tutorial-selector-panel">
+        <h2 id="tutorialSelectorTitle">Select a tutorial</h2>
+        <p id="tutorialSelectorDescription">
+            Choose the option that best matches your current experience. All
+            options use the same Python editor and maze. You can change the
+            tutorial later.
+        </p>
+
+        <div class="tutorial-options">
+            <button type="button" class="tutorial-option"
+                    data-tutorial-mode="programming">
+                <span class="tutorial-option-title">Introduction to programming</span>
+                <span class="tutorial-option-description">
+                    For participants with little or no programming experience.
+                    Explains commands, conditions and loops through short guided
+                    exercises.
+                </span>
+            </button>
+
+            <button type="button" class="tutorial-option"
+                    data-tutorial-mode="python">
+                <span class="tutorial-option-title">Introduction to Python</span>
+                <span class="tutorial-option-description">
+                    For participants who have programmed before but have not used
+                    Python. Covers the relevant Python syntax and maze functions.
+                </span>
+            </button>
+
+            <button type="button" class="tutorial-option"
+                    data-tutorial-mode="instructions">
+                <span class="tutorial-option-title">Instructions only</span>
+                <span class="tutorial-option-description">
+                    For participants already familiar with Python. Shows the
+                    objective and available functions before opening the editor.
+                </span>
+            </button>
+        </div>
+
+        <button id="closeTutorialSelector" class="tutorial-selector-close"
+                type="button" hidden>Keep current tutorial</button>
+    </div>
+</dialog>
+
+<div id="tutorialBackdrop" class="tutorial-backdrop" hidden
+     aria-hidden="true"></div>
+
+<section id="tutorialCoachmark" class="tutorial-coachmark" hidden
+         tabindex="-1" aria-labelledby="tutorialStepTitle"
+         aria-describedby="tutorialStepBody">
+    <p id="tutorialStepCount" class="tutorial-step-count"></p>
+    <h2 id="tutorialStepTitle"></h2>
+    <div id="tutorialStepBody" class="tutorial-step-body"></div>
+    <p id="tutorialFeedback" class="tutorial-feedback" aria-live="polite"
+       hidden></p>
+
+    <div class="tutorial-code-action">
+        <button id="tutorialInsertCodeBtn" type="button" hidden>
+            Replace editor with example
+        </button>
+    </div>
+
+    <div class="tutorial-navigation">
+        <button id="tutorialCloseBtn" type="button">Close tutorial</button>
+        <span class="tutorial-navigation-spacer"></span>
+        <button id="tutorialBackBtn" type="button">Back</button>
+        <button id="tutorialNextBtn" type="button">Continue</button>
+    </div>
+</section>
+
 <!--
   Pyodide is a Python interpreter compiled to WebAssembly.
   This script loads Pyodide and provides a global loadPyodide() function.
@@ -453,6 +551,7 @@ while not at_goal():
   in Pyodide, updating the maze canvas, and swapping between instruction tabs.
 -->
 <script type="module" src="maze.js"></script>
+<script src="tutorial.js"></script>
 
 </body>
 </html>

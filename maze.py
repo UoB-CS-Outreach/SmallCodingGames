@@ -8,26 +8,47 @@ The actual maze and drawing are handled by JavaScript in maze.js.
 import sys
 import time
 
-from js import (
-    JS_MAZE,
-    JS_MAZE_GOAL_COL,
-    JS_MAZE_GOAL_ROW,
-    JS_MAZE_NUM_COLS,
-    JS_MAZE_NUM_ROWS,
-    JS_MAZE_START_COL,
-    JS_MAZE_START_ROW,
-    js_enqueue_action,
-)
+import js
+from js import js_enqueue_action
 
 # Direction encoding:
 # 0 = up, 1 = right, 2 = down, 3 = left
 DIRS = [(-1, 0), (0, 1), (1, 0), (0, -1)]
 DIR_NAMES = ["up", "right", "down", "left"]
 
-# position state
-row = int(JS_MAZE_START_ROW)
-col = int(JS_MAZE_START_COL)
+# Maze and position state. JavaScript calls _sync_maze_from_js() whenever a
+# different fixed or generated maze is selected.
+maze = []
+num_rows = 0
+num_cols = 0
+start_row = 0
+start_col = 0
+goal_row = 0
+goal_col = 0
+row = 0
+col = 0
 direction = 1
+
+
+def _sync_maze_from_js():
+    """Copy the current JavaScript maze into Python and reset the player."""
+    global maze, num_rows, num_cols
+    global start_row, start_col, goal_row, goal_col
+    global row, col, direction
+
+    maze = [str(line) for line in js.JS_MAZE]
+    num_rows = int(js.JS_MAZE_NUM_ROWS)
+    num_cols = int(js.JS_MAZE_NUM_COLS)
+    start_row = int(js.JS_MAZE_START_ROW)
+    start_col = int(js.JS_MAZE_START_COL)
+    goal_row = int(js.JS_MAZE_GOAL_ROW)
+    goal_col = int(js.JS_MAZE_GOAL_COL)
+    row = start_row
+    col = start_col
+    direction = 1
+
+
+_sync_maze_from_js()
 
 
 # JS functions
@@ -77,8 +98,8 @@ def reset_state():
     Reset the maze state.
     """
     global row, col, direction
-    row = int(JS_MAZE_START_ROW)
-    col = int(JS_MAZE_START_COL)
+    row = start_row
+    col = start_col
     direction = 1
 
 
@@ -100,14 +121,14 @@ def _is_wall(r, c):
     """
     if not _in_bounds(r, c):
         return True
-    return JS_MAZE[r][c] == "#"
+    return maze[r][c] == "#"
 
 
 def _in_bounds(r, c):
     """
     Return True if the cell (r, c) is in bounds.
     """
-    return 0 <= r < int(JS_MAZE_NUM_ROWS) and 0 <= c < int(JS_MAZE_NUM_COLS)
+    return 0 <= r < num_rows and 0 <= c < num_cols
 
 
 # Maze game functions
@@ -132,7 +153,7 @@ def move():
             "that would leave the maze. Try checking path_ahead() first."
         )
 
-    if JS_MAZE[nr][nc] == "#":
+    if maze[nr][nc] == "#":
         raise RuntimeError(
             f"Wall ahead: can't move {DIR_NAMES[direction]} from "
             f"(row={row}, col={col}) into (row={nr}, col={nc}). Try checking "
@@ -200,4 +221,4 @@ def at_goal():
     """
     Return True if the player is currently on the goal cell.
     """
-    return (row == int(JS_MAZE_GOAL_ROW)) and (col == int(JS_MAZE_GOAL_COL))
+    return (row == goal_row) and (col == goal_col)
