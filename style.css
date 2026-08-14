@@ -237,7 +237,7 @@ textarea {
 }
 
 .tabs-content {
-    height: clamp(240px, 32vh, 340px);
+    height: clamp(300px, 38vh, 400px);
     box-sizing: border-box;
     overflow-y: auto;
     overscroll-behavior: contain;

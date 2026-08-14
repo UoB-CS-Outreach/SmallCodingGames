@@ -168,14 +168,23 @@ const canvas = document.getElementById("mazeCanvas");
 const ctx = canvas.getContext("2d");
 
 /*
-  Compute how large each cell should be so that the entire maze
-  fits inside the canvas and is centred.
+  Resize the canvas to the maze's aspect ratio, then compute the cell size.
+  This keeps the largest dimension at 480px without leaving unused bands
+  above/below or beside rectangular mazes.
 */
+const MAX_MAZE_CANVAS_SIZE = 480;
 let cellSize;
 let offsetX;
 let offsetY;
 
 function updateMazeGeometry() {
+    const scale = Math.min(
+        MAX_MAZE_CANVAS_SIZE / numCols,
+        MAX_MAZE_CANVAS_SIZE / numRows,
+    );
+
+    canvas.width = Math.max(1, Math.round(numCols * scale));
+    canvas.height = Math.max(1, Math.round(numRows * scale));
     cellSize = Math.min(canvas.width / numCols, canvas.height / numRows);
     offsetX = (canvas.width - numCols * cellSize) / 2;
     offsetY = (canvas.height - numRows * cellSize) / 2;
@@ -305,10 +314,7 @@ async function playActions(runId) {
         }
 
         drawMaze();
-        const raw = parseInt(speedInput.value, 10);
-        const min = parseInt(speedInput.min, 10);
-        const max = parseInt(speedInput.max, 10);
-        const delay = (max + min) - raw;
+        const delay = getActionDelay(speedInput, actionQueue.length);
         await sleep(delay);
     }
 }
@@ -316,6 +322,31 @@ async function playActions(runId) {
 let pyodide;
 let pythonReady = false;
 let runCounter = 0;
+let tutorialAnimationActive = false;
+
+const TUTORIAL_TARGET_ACTION_DELAY_MS = 1000;
+const TUTORIAL_EXTRA_DELAY_BUDGET_MS = 10000;
+
+function getActionDelay(speedInput, actionCount) {
+    const raw = parseInt(speedInput.value, 10);
+    const min = parseInt(speedInput.min, 10);
+    const max = parseInt(speedInput.max, 10);
+    const normalDelay = (max + min) - raw;
+
+    if (!tutorialAnimationActive) return normalDelay;
+
+    // Make short tutorial examples easy to follow. For a long program, divide
+    // a bounded amount of extra time across its actions so the tutorial pace
+    // cannot add more than roughly ten seconds to the complete animation.
+    const actionTotal = Math.max(1, actionCount);
+    const extraDelayBudget = TUTORIAL_EXTRA_DELAY_BUDGET_MS / actionTotal;
+    const extraDelayNeeded = Math.max(
+        0,
+        TUTORIAL_TARGET_ACTION_DELAY_MS - normalDelay,
+    );
+
+    return normalDelay + Math.min(extraDelayNeeded, extraDelayBudget);
+}
 
 /*
   Create a single Pyodide instance and load maze.py into it.
@@ -662,8 +693,13 @@ document.getElementById("generateMazeBtn").addEventListener("click", () => {
 // Tutorials always use the known fixed maze. It stays loaded afterward so the
 // learner can choose when and how to move on to another maze.
 document.addEventListener("tutorial:start", () => {
+    tutorialAnimationActive = true;
     clearMazeChoicePrompt();
     if (currentMazeLevel !== "tutorial") loadPresetMaze("tutorial");
+});
+
+document.addEventListener("tutorial:end", () => {
+    tutorialAnimationActive = false;
 });
 
 document.addEventListener("tutorial:complete", async () => {

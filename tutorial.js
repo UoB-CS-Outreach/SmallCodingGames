@@ -46,6 +46,17 @@ const tutorialDefinitions = {
                 failure: "The triangle did not move. Check that the editor contains move() and try again.",
             },
             {
+                target: "#buttons",
+                title: "Controls for experimenting",
+                body: `
+                    <p><strong>Run program</strong> starts again from the maze's
+                    starting square and executes everything in the editor.</p>
+                    <p><strong>Reset position</strong> stops an animation and returns
+                    the triangle to the start. The <strong>Speed</strong> slider changes
+                    only the animation speed, not what the program does.</p>
+                `,
+            },
+            {
                 target: "#code",
                 title: "Commands run in order",
                 body: `
@@ -71,6 +82,16 @@ const tutorialDefinitions = {
                     countActions(result, "move") >= 2
                 ),
                 failure: "The expected turn and two movements were not completed. Restore the example and try again.",
+            },
+            {
+                target: "#output",
+                title: "Read the output",
+                body: `
+                    <p>The Output box shows text from <code>print()</code>, useful
+                    messages about the result, and any Python errors.</p>
+                    <p>You do not type here. If something goes wrong, read the final
+                    line, correct the code in the editor, and run it again.</p>
+                `,
             },
             {
                 target: "#code",
@@ -174,6 +195,27 @@ const tutorialDefinitions = {
                 failure: "The example did not move one square. Restore the example, check the parentheses and try again.",
             },
             {
+                target: "#buttons",
+                title: "Run, reset and speed",
+                body: `
+                    <p><strong>Run program</strong> resets the triangle and executes
+                    the whole editor. <strong>Reset position</strong> stops an
+                    animation without changing your code.</p>
+                    <p>The <strong>Speed</strong> slider changes how quickly actions
+                    are animated; it does not change Python's decisions.</p>
+                `,
+            },
+            {
+                target: "#output",
+                title: "Output and errors",
+                body: `
+                    <p>This read-only box contains text from <code>print()</code>, the
+                    final maze status, and Python errors.</p>
+                    <p>When debugging, read the final error line first, edit the
+                    Python Code box, and run the program again.</p>
+                `,
+            },
+            {
                 target: "#code",
                 title: "Booleans and indented blocks",
                 body: `
@@ -254,9 +296,11 @@ const tutorialDefinitions = {
                 `,
             },
             {
-                target: "#mazeControls",
-                title: "Functions and maze choices",
+                target: "#code",
+                title: "Write code here",
                 body: `
+                    <p>The Python Code box is where you write or paste your program.
+                    The line numbers help you match errors to the relevant line.</p>
                     <ul>
                         <li>Act: <code>move()</code>, <code>turn_left()</code>,
                         <code>turn_right()</code></li>
@@ -265,11 +309,51 @@ const tutorialDefinitions = {
                         <code>path_right()</code></li>
                         <li>Finish condition: <code>at_goal()</code></li>
                     </ul>
-                    <p>Errors and printed text appear in the Output panel. The
-                    tutorial maze will remain loaded when these instructions close.</p>
-                    <p>Use the <strong>Maze</strong> menu to load another type, or
-                    <strong>Generate new maze</strong> to create a fresh layout for
-                    the selected type.</p>
+                    <p><strong>Load sample</strong>, below the editor, replaces its
+                    contents with a complete example solver.</p>
+                `,
+            },
+            {
+                target: "#buttons",
+                title: "Run, reset and adjust speed",
+                body: `
+                    <p><strong>Run program</strong> resets the triangle to the start,
+                    then executes the entire code box.</p>
+                    <p><strong>Reset position</strong> stops the current animation.
+                    The <strong>Speed</strong> slider controls only the animation rate.</p>
+                `,
+            },
+            {
+                target: "#output",
+                title: "Check output and errors",
+                body: `
+                    <p>The Output box is read-only. It shows text produced by
+                    <code>print()</code>, whether the goal was reached, and any Python
+                    errors.</p>
+                    <p>If a run fails, read the final line here before changing the
+                    code and trying again.</p>
+                `,
+            },
+            {
+                target: "#referenceTabs",
+                title: "Use the help tabs",
+                body: `
+                    <p><strong>Maze API &amp; Help</strong> is the concise function and
+                    error reference. <strong>Beginner Guide</strong> builds a solver
+                    step by step.</p>
+                    <p>The panel scrolls, so the rest of each guide remains available
+                    while you work.</p>
+                `,
+            },
+            {
+                target: "#mazeControls",
+                title: "Choose or generate a maze",
+                body: `
+                    <p>The <strong>Maze</strong> menu loads a fixed difficulty or
+                    special type. <strong>Generate new maze</strong> creates a fresh
+                    layout for the selected type.</p>
+                    <p>The tutorial maze stays loaded when this guidance closes, so
+                    change it only when you are ready.</p>
                 `,
                 final: true,
             },
@@ -481,6 +565,9 @@ function finishTutorial(completed = false) {
     resumeButton.hidden = true;
     hideCoachmark();
     updateStatus(true);
+    document.dispatchEvent(new CustomEvent("tutorial:end", {
+        detail: {mode: currentMode, completed}
+    }));
 
     if (completed) {
         document.dispatchEvent(new CustomEvent("tutorial:complete", {
