@@ -10,17 +10,10 @@
 
 <body>
 <div id="app">
-    <h1>Python Maze Solver</h1>
-    <h2>Write Python code to guide the triangle through the maze. Select a
-        tutorial level to begin.</h2>
-
-    <div class="tutorial-toolbar" id="tutorialToolbar" hidden>
-        <p id="tutorialStatus" aria-live="polite"></p>
-        <div class="tutorial-toolbar-actions">
-            <button id="restartTutorialBtn" type="button">Restart tutorial</button>
-            <button id="changeTutorialBtn" type="button">Change tutorial</button>
-        </div>
-    </div>
+    <header class="app-header">
+        <h1>Python Maze Solver</h1>
+        <p class="app-subtitle">Solve the maze with Python code.</p>
+    </header>
 
     <!--
       Top row: the maze canvas and the control buttons.
@@ -42,11 +35,16 @@
         <div id="mazeControls">
             <label for="mazeSelect">Maze:</label>
             <select id="mazeSelect" disabled>
-                <option value="tutorial">Tutorial maze</option>
-                <option value="easy">Easy</option>
-                <option value="medium">Medium</option>
-                <option value="hard">Hard</option>
-                <option value="expert">Expert</option>
+                <optgroup label="Difficulty">
+                    <option value="tutorial">Tutorial maze</option>
+                    <option value="easy">Easy</option>
+                    <option value="medium">Medium</option>
+                    <option value="hard">Hard</option>
+                </optgroup>
+                <optgroup label="Special types">
+                    <option value="expert">Loops and islands</option>
+                    <option value="random">Random blocks</option>
+                </optgroup>
             </select>
             <button id="generateMazeBtn" type="button" disabled>
                 Generate new maze
@@ -86,97 +84,81 @@
     <div class="row" id="bottom-row">
         <div class="tabs" id="help-tabs">
             <div class="tabs-nav" id="referenceTabs">
-                <button type="button" data-tab="maze" class="active">Maze Instructions
+                <button type="button" data-tab="maze" class="active">Maze API &amp; Help
                 </button>
-                <button type="button" data-tab="guide">Beginners Guide</button>
+                <button type="button" data-tab="guide">Beginner Guide</button>
             </div>
 
-            <div class="tabs-content">
+            <div class="tabs-content" tabindex="0"
+                 aria-label="Help and reference content">
                 <section class="tab-pane active" data-tab="maze">
                     <div class="tab-section">
-                        <p><strong>Goal</strong></p>
+                        <p><strong>Goal and controls</strong></p>
                         <p>
-                            Guide the blue triangle from its starting square to the
-                            green goal square without walking into walls using Python
-                            code.
+                            Write a Python program that guides the blue triangle from
+                            its starting square to the green goal square without
+                            walking into walls. The triangle starts facing right, and
+                            every run begins again from the start.
                         </p>
 
-                        <p><strong>Controls</strong></p>
                         <ul>
-                            <li><em>Run program</em> runs whatever is in the program
-                                box to move the triangle.
+                            <li><strong>Run program</strong> runs the code in the Python
+                                editor.
                             </li>
-                            <li><em>Reset position</em> sends the triangle back to the
-                                start.
+                            <li><strong>Reset position</strong> stops the current
+                                animation and returns the triangle to the start.
                             </li>
-                            <li>The <em>speed</em> slider adjusts animation speed.</li>
-                            <li><em>Load sample</em> loads a sample right-hand maze
+                            <li>The <strong>speed</strong> slider changes animation
+                                speed.</li>
+                            <li><strong>Load sample</strong> loads a right-hand-wall
                                 solver into the code box.
                             </li>
                         </ul>
                     </div>
 
                     <div class="tab-section">
-                        <p>The <strong>Python Code</strong> pane contains an area to
-                            write code for solving the maze. To move the triangle to the
-                            end goal, you must write code in Python utilising the
-                            following functions:</p>
+                        <p><strong>Action functions</strong></p>
+                        <p>These functions change the triangle:</p>
                         <ul>
-                            <li><code>at_goal()</code> – Returns <code>True</code> if
-                                the triangle is on the green goal square, else returns
-                                <code>False</code>.
+                            <li><code>move()</code> — move one square in the direction
+                                the triangle is facing. It raises a
+                                <code>RuntimeError</code> if a wall is ahead.
                             </li>
-                            <li><code>move()</code> – Moves the triangle one square
-                                forward. Throws a <code>RuntimeError</code> if there is
-                                a wall.
+                            <li><code>turn_left()</code> — turn 90 degrees left without
+                                moving.
                             </li>
-                            <li><code>turn_left()</code> – Turns the triangle 90 degrees
-                                left.
-                            </li>
-                            <li><code>turn_right()</code> – Turns the triangle 90
-                                degrees right.
-                            </li>
-                            <li><code>path_ahead()</code> – Returns <code>True</code> if
-                                the cell in front of the triangle can be moved to, else
-                                returns <code>False</code>.
-                            </li>
-                            <li><code>path_behind()</code> – Returns <code>True</code>
-                                if the cell behind the triangle can be moved to, else
-                                returns <code>False</code>.
-                            </li>
-                            <li><code>path_left()</code> – Returns <code>True</code> if
-                                the cell to the left of the triangle can be moved to,
-                                else returns <code>False</code>.
-                            </li>
-                            <li><code>path_right()</code> – Returns <code>True</code> if
-                                the cell to the right of the triangle can be moved to,
-                                else returns <code>False</code>.
+                            <li><code>turn_right()</code> — turn 90 degrees right
+                                without moving.
                             </li>
                         </ul>
-                        <p>To complete the maze, you can use variables, loops,
-                            conditional statements, and functions among other Python
-                            language features.</p>
-                        <p>The <strong>Output</strong> pane will contain any
-                            <code>print</code> statement or errors thrown when you run
-                            your code.</p>
+
+                        <p><strong>Question functions</strong></p>
+                        <p>These inspect the maze without moving the triangle.
+                            Directions are relative to the way it is currently facing.
+                            Each returns <code>True</code> or <code>False</code>.</p>
+                        <ul>
+                            <li><code>path_ahead()</code> — is the square directly
+                                ahead open?
+                            </li>
+                            <li><code>path_left()</code> — is the square to the
+                                triangle's left open?
+                            </li>
+                            <li><code>path_right()</code> — is the square to the
+                                triangle's right open?
+                            </li>
+                            <li><code>path_behind()</code> — is the square directly
+                                behind open?
+                            </li>
+                            <li><code>at_goal()</code> — is the triangle on the green
+                                goal square?
+                            </li>
+                        </ul>
                     </div>
 
                     <div class="tab-section">
-                        <p><strong>Loops</strong></p>
-                        <p>Both <code>for</code> and <code>while</code> loops can be
-                            used:</p>
-                        <pre><code>steps = 0
-while path_ahead():
-    move()
-    steps += 1
-print(f"I moved {steps} steps")</code></pre>
-                        <p>A <code>while</code> loop to run until you reach the end is
-                            likely a core component of any implementation</p>
-
-                        <p><strong>Conditions</strong></p>
-                        <p>Standard conditional statements in <code>if</code>, <code>elif</code>
-                            and <code>else</code> are available and crucial in
-                            navigating the maze:</p>
+                        <p><strong>Useful Python patterns</strong></p>
+                        <p>Use <code>if</code> to choose one action. A colon starts each
+                            block, and its contents are indented by four spaces:</p>
                         <pre><code>if path_ahead():
     move()
 elif path_right():
@@ -184,286 +166,230 @@ elif path_right():
 else:
     turn_left()</code></pre>
 
-                        <p><strong>New Functions</strong></p>
-                        <p>Both more complex solutions, you can create your own
-                            functions:</p>
+                        <p>Use <code>while</code> to repeat choices until the goal is
+                            reached. The <code>...</code> below is a placeholder, so
+                            replace it with your own indented decision:</p>
+                        <pre><code>while not at_goal():
+    # Check the paths and choose an action here
+    ...</code></pre>
+
+                        <p>You can also name a reusable sequence by defining your own
+                            function:</p>
                         <pre><code>def go_forward_until_wall():
     while path_ahead():
         move()
 
 go_forward_until_wall()</code></pre>
+                        <p>For a complete worked progression, open the
+                            <strong>Beginner Guide</strong> tab.</p>
                     </div>
 
                     <div class="tab-section">
-                        <p><strong>Common Mistakes</strong></p>
+                        <p><strong>Output and common errors</strong></p>
+                        <p><code>print()</code> messages and Python errors appear in
+                            the Output panel. Read the final line first; it usually
+                            identifies the problem.</p>
                         <ul>
-                            <li>Missing colon (<code>:</code>) - <code>"SyntaxError:
-                                expected ':'"</code> certain lines of code such as
-                                conditionals (<code>if</code>, <code>elif</code> and
-                                <code>else</code> and loops (<code>while</code> and
-                                <code>for</code> ) must end in a <code>:</code>
-                                character.
+                            <li><strong><code>SyntaxError</code>:</strong> check exact
+                                spelling, matching parentheses and a colon after
+                                <code>if</code>, <code>elif</code>, <code>else</code>,
+                                <code>while</code> and <code>def</code> lines.
                             </li>
-                            <li>Wrong indentation - <code>"IndentationError"</code> Code
-                                after conditionals, loops and function declarations must
-                                be evenly indented using spaces or tabs. Use the same
-                                amount of spaces for all indentation (by default 4
-                                spaces).
+                            <li><strong><code>IndentationError</code>:</strong> use the
+                                same indentation throughout a block—normally four
+                                spaces. Pressing Tab in the editor inserts four spaces.
                             </li>
-                            <li>Infinite loop - <code>"StepLimitError: Program
-                                stopped"</code> When using loops, make sure there is a
-                                way to exit, or it will run forever! This may also
-                                happen if your program cannot find the goal. We
-                                automatically stop the program for this exercise in both
-                                cases.
+                            <li><strong><code>RuntimeError: Wall ahead</code>:</strong>
+                                call a path question before <code>move()</code>.
                             </li>
-                            <li>Running into a wall - <code>RuntimeError: Wall
-                                ahead</code> If you attempt to move into a wall the
-                                program will stop. Try using a function to check if
-                                there is something where you want to move first.
+                            <li><strong><code>StepLimitError</code>:</strong> a loop is
+                                repeating without enough progress. Make sure a branch
+                                moves or turns and that the loop can eventually stop.
                             </li>
                         </ul>
+                        <p>When debugging, start with one or two commands, run them,
+                            then add one decision at a time.</p>
                     </div>
                 </section>
 
                 <section class="tab-pane" data-tab="guide">
                     <div class="tab-section">
-                        <p><strong>Beginner guide</strong></p>
+                        <p><strong>Start here: Python in one minute</strong></p>
                         <p>
-                            This activity is about giving the triangle instructions
-                            using Python code to move it through the maze.
+                            A program is a list of precise instructions. Python reads
+                            the list from top to bottom. In this activity, a named
+                            instruction such as <code>move()</code> is a
+                            <strong>function call</strong>; the parentheses tell Python
+                            to run it.
                         </p>
-                        <p> Your program runs from top to bottom.
-                            If it tries to walk into a wall, it stops and shows an error
-                            in the Output box.</p>
                         <p>
-                            In Python, spaces matter. Lines <em>inside</em> an
-                            <code>if</code> or <code>while</code> must be indented
-                            (usually 4 spaces). The Tab key on the right of the keyboard
-                            can be used to enter 4 spaces in the code box.
+                            Python is case-sensitive, so <code>move()</code> and
+                            <code>Move()</code> are different. Lines beginning with
+                            <code>#</code> are comments for people. Use
+                            <code>print("message")</code> to show text in Output.
                         </p>
+                        <pre><code># This is a comment
+move()
+print("My program finished")</code></pre>
+                        <p>Select <strong>Run program</strong> to try your code. Every
+                            run resets the triangle first. Errors are useful feedback:
+                            read the final line in Output, correct the code, and run it
+                            again.</p>
                     </div>
 
                     <div class="tab-section">
                         <p><strong>Step 1: Your first commands</strong></p>
-                        <p>Try these one at a time and press <em>Run program</em>:</p>
+                        <p>Start with one command and press <strong>Run
+                            program</strong>:</p>
                         <pre><code>move()</code></pre>
+                        <p>Next, replace the editor contents with a sequence. Each
+                            command runs once, in order:</p>
                         <pre><code>turn_right()
 move()
 move()</code></pre>
-                        <pre><code>turn_left()
-move()
-</code></pre>
                         <p>
-                            What happens for each of them? What happens if you do not
-                            remove the previous code before adding the next?
+                            Predict the result before running it. Then swap
+                            <code>turn_right()</code> for <code>turn_left()</code> and
+                            compare what happens.
                         </p>
                     </div>
 
                     <div class="tab-section">
-                        <p><strong>Step 2: Checking for a wall (if statements)</strong>
-                        </p>
+                        <p><strong>Step 2: Ask questions</strong></p>
                         <p>
-                            Before moving, you can ask “is there space ahead?”. These
-                            functions return <code>True</code> or <code>False</code>.
+                            A path function asks about the maze without moving the
+                            triangle. Its answer is either <code>True</code> or
+                            <code>False</code>, called a Boolean value. Directions are
+                            relative to where the triangle is facing.
                         </p>
+                        <pre><code>print(path_ahead())
+print(path_left())
+print(path_right())</code></pre>
+                        <p>Run this code, then add a turn before the questions and
+                            compare the answers.</p>
+                    </div>
+
+                    <div class="tab-section">
+                        <p><strong>Step 3: Make a decision with if</strong></p>
+                        <p>An <code>if</code> statement runs a block only when its
+                            question is <code>True</code>. <code>else</code> supplies a
+                            fallback:</p>
                         <pre><code>if path_ahead():
     move()
 else:
     turn_right()</code></pre>
                         <p>
-                            Try adding <code>turn_right()</code> and/or <code>turn_left()</code>
-                            before and see what happens how does this change the
-                            triangles movement from before?
+                            The colon starts a block. The four spaces before each
+                            action are indentation; they show which action belongs to
+                            which choice. Python treats indentation as part of the
+                            program, so keep it consistent.
                         </p>
                     </div>
 
                     <div class="tab-section">
-                        <p><strong>Step 3: Repeating actions (while loops)</strong></p>
+                        <p><strong>Step 4: Repeat actions with while</strong></p>
                         <p>
-                            A loop repeats code. <code>while</code> loops continue until
-                            a condition is met. This one keeps moving until a wall is
-                            directly ahead:
+                            A <code>while</code> loop repeats its indented block while
+                            its question remains <code>True</code>. This loop moves
+                            safely until a wall is ahead:
                         </p>
                         <pre><code>while path_ahead():
     move()</code></pre>
                         <p>
-                            In this case, the goal is to reach the green square, so we
-                            will want to add a condition somewhere using an if or loop
-                            to end any loops when <code>at_goal()</code> becomes <code>True</code>.
+                            The path changes after every move, so Python checks the
+                            question again. If a loop never changes anything relevant
+                            to its question, it can run forever; this activity stops it
+                            and reports a <code>StepLimitError</code>.
                         </p>
                     </div>
 
                     <div class="tab-section">
-                        <p><strong>Step 4: Build a simple maze solver</strong></p>
+                        <p><strong>Step 5: Choose one maze action</strong></p>
                         <p>
-                            We are going to build a small solver that follows these
-                            rules:
+                            A simple wall-following strategy prefers the path on the
+                            right. For one round, its rules are:
                         </p>
                         <ol>
-                            <li>If we can move forward, do it.</li>
-                            <li>Otherwise, try turning right and moving.</li>
-                            <li>If that is not possible, try turning left and moving.
-                            </li>
-                            <li>If none are possible, turn around (a dead end).</li>
+                            <li>If the right path is open, turn right and move.</li>
+                            <li>Otherwise, if the path ahead is open, move.</li>
+                            <li>Otherwise, turn left and check again next round.</li>
                         </ol>
-                        <p>
-                            The key idea is: we keep repeating these rules until we
-                            reach the goal.
-                        </p>
+                        <p><code>elif</code> means “otherwise, if”. Python checks the
+                            branches in order and runs only the first matching one.</p>
                     </div>
 
                     <div class="tab-section">
-                        <p><strong>Step 4a: Create a main loop</strong></p>
+                        <p><strong>Step 5a: Test one round</strong></p>
+                        <p>Run these rules once and observe which branch Python
+                            chooses:</p>
+                        <pre><code>if path_right():
+    turn_right()
+    move()
+elif path_ahead():
+    move()
+else:
+    turn_left()</code></pre>
+                        <p>Because each run starts in the same place, you can change
+                            the order of the questions and compare the result.</p>
+                    </div>
+
+                    <div class="tab-section">
+                        <p><strong>Step 6: Repeat until the goal</strong></p>
                         <p>
-                            Start with a loop that will keep running until the triangle
-                            reaches the green square:
+                            <code>at_goal()</code> becomes <code>True</code> on the green
+                            square. <code>not</code> reverses a Boolean value, so
+                            <code>while not at_goal():</code> means “repeat while we have
+                            not reached the goal”. Put the one-round decision inside it:
                         </p>
                         <pre><code>while not at_goal():
-    move()</code></pre>
-                        <p>
-                            Try running this. You will find it runs into a wall soon,
-                            but it will keep moving until then.
-                        </p>
-                    </div>
-
-                    <div class="tab-section">
-                        <p><strong>Step 4b: Add a step counter (optional)</strong></p>
-                        <p>
-                            Next let’s count how many actions we take. This is useful
-                            for tracking progress. To do this we will create a variable
-                            called "steps" and set it to 0. Add this to your current
-                            code, including your line to move the triangle. It should
-                            look somthing like this:
-                        </p>
-                        <pre><code>steps = 0
-
-while not at_goal():
-    steps = steps + 1
-    print("Step", steps)</code></pre>
-                        <p>
-                            Try running your program with these additions. If we are
-                            making progress and still moving you should see a few steps
-                            printed before we run into a wall. If you see many
-                            print-outs and the tab freezes for a few seconds, you may be
-                            in an infinite loop. Try adding some movement code to your
-                            program.
-                        </p>
-                    </div>
-
-                    <div class="tab-section">
-                        <p><strong>Step 4c: Rule 1 — move forward when possible</strong>
-                        </p>
-                        <p>
-                            Now we add the first rule: if there is space ahead, move
-                            forward.
-                        </p>
-                        <pre><code>while not at_goal():
-    if path_ahead():
-        move()</code></pre>
-                        <p>
-                            The triangle should move forward until it hits a wall, then
-                            it will get stuck because we haven’t told it what to do when
-                            forward is blocked.
-                        </p>
-                        <p>
-                            Remember: indentation matters in Python! The
-                            <code>move()</code> line must be indented under the
-                            <code>if</code>. This can also be used to move your <code>print</code>
-                            statement outside the loop if you find the multiple print
-                            outs annoying and just want the final count at the end.
-                        </p>
-                    </div>
-
-                    <div class="tab-section">
-                        <p><strong>Step 4d: Rule 2 — if forward is blocked, try
-                            right</strong></p>
-                        <p>
-                            Extend the <code>if</code> with an <code>elif</code> (“else
-                            if”, another condition to check if the first is
-                            <code>False</code>) We want to use the
-                            <code>path_right()</code> function to check if we can turn
-                            and <code>turn_right()</code> to orient our triangle.
-                        </p>
-                        <pre><code>while not at_goal():
-    if path_ahead():
-        move()
-    elif path_right():
-        turn_right()
-        move()</code></pre>
-                        <p>
-                            We should get further now, as the triangle can turn right
-                            when it hits a wall.
-                        </p>
-                    </div>
-
-                    <div class="tab-section">
-                        <p><strong>Step 4e: Rule 3 — if right is blocked, try
-                            left</strong></p>
-                        <p>
-                            Now do the same, but with functions to move left. </p>
-                        <pre><code>while not at_goal():
-    if path_ahead():
-        move()
-    elif path_right():
+    if path_right():
         turn_right()
         move()
-    elif path_left():
-        turn_left()
-        move()</code></pre>
-                        <p>
-                            If your program runs correctly, you should notice that this
-                            is enough to reach the end of this maze and reach the goal!
-                            Good job!
-                        </p>
-                        <p>
-                        </p>
-                    </div>
-
-                    <div class="tab-section">
-                        <p><strong>Step 4f: Rule 4 — dead ends (turn around)</strong>
-                        </p>
-                        <p>
-                            What if forward, left, and right are all blocked in a
-                            different maze? That means we are in a dead end.
-                            We can turn around by turning right twice. Add an
-                            <code>else</code> block to handle this case, which runs of
-                            none of the other conditionals are <code>true</code>.
-                        </p>
-                        <pre><code>while not at_goal():
-    if path_ahead():
-        move()
-    elif path_right():
-        turn_right()
-        move()
-    elif path_left():
-        turn_left()
+    elif path_ahead():
         move()
     else:
-        turn_right()
-        turn_right()</code></pre>
+        turn_left()
+
+print("Reached the goal!")</code></pre>
+                        <p>This wall-following strategy solves the tutorial maze and
+                            many carved mazes. It is not guaranteed to solve every maze
+                            containing loops or disconnected wall islands. Those
+                            special maze types are useful tests for stronger ideas.</p>
                     </div>
 
                     <div class="tab-section">
-                        <p>If you want to do extra, try changing the solver and see how
-                            this changes the code, maze animation and output</p>
+                        <p><strong>Further challenges</strong></p>
+                        <p>Change one thing at a time, predict the result, then test it:</p>
                         <ul>
                             <li><strong>Prefer left instead of right:</strong> swap the
                                 <code>path_left()</code> and <code>path_right()</code>
                                 blocks.
                             </li>
-                            <li><strong>Print the final step count:</strong> count the
-                                number of steps your make, and then print the number
-                                outside the loop when the goal is reached.
+                            <li><strong>Measure your solver:</strong> create a variable
+                                such as <code>moves = 0</code>, increase it after every
+                                <code>move()</code>, and print the final value.
                             </li>
-                            <li>Create your own Python function like <code>def
-                                turn_around():</code> and call it instead of repeating
-                                two right turns.
-                            </li>
+                            <li><strong>Name repeated behaviour:</strong> create a
+                                function such as <code>def turn_around():</code> and
+                                call it where needed.</li>
+                            <li><strong>Test assumptions:</strong> try a generated
+                                braided maze or the random-blocks special type. If the
+                                solver loops, use printed messages to work out why.</li>
                         </ul>
                     </div>
                 </section>
             </div>
+        </div>
+    </div>
+
+    <div class="tutorial-toolbar" id="tutorialToolbar" hidden>
+        <p id="tutorialStatus" aria-live="polite"></p>
+        <div class="tutorial-toolbar-actions">
+            <button id="resumeTutorialBtn" type="button" hidden>
+                Resume tutorial
+            </button>
+            <button id="restartTutorialBtn" type="button">Restart tutorial</button>
+            <button id="changeTutorialBtn" type="button">Change tutorial</button>
         </div>
     </div>
 </div>
@@ -482,29 +408,28 @@ while not at_goal():
         <div class="tutorial-options">
             <button type="button" class="tutorial-option"
                     data-tutorial-mode="programming">
-                <span class="tutorial-option-title">Introduction to programming</span>
+                <span class="tutorial-option-title">New to coding</span>
                 <span class="tutorial-option-description">
-                    For participants with little or no programming experience.
-                    Explains commands, conditions and loops through short guided
-                    exercises.
+                    Start here with little or no computing experience. Learn what a
+                    program is, then practise commands, decisions and loops.
                 </span>
             </button>
 
             <button type="button" class="tutorial-option"
                     data-tutorial-mode="python">
-                <span class="tutorial-option-title">Introduction to Python</span>
+                <span class="tutorial-option-title">New to Python</span>
                 <span class="tutorial-option-description">
-                    For participants who have programmed before but have not used
-                    Python. Covers the relevant Python syntax and maze functions.
+                    For participants who know some programming but not Python. A quick
+                    tour of calls, output, Booleans, indentation, decisions and loops.
                 </span>
             </button>
 
             <button type="button" class="tutorial-option"
                     data-tutorial-mode="instructions">
-                <span class="tutorial-option-title">Instructions only</span>
+                <span class="tutorial-option-title">Quick start</span>
                 <span class="tutorial-option-description">
                     For participants already familiar with Python. Shows the
-                    objective and available functions before opening the editor.
+                    objective and maze API before opening the editor.
                 </span>
             </button>
         </div>
@@ -534,6 +459,8 @@ while not at_goal():
 
     <div class="tutorial-navigation">
         <button id="tutorialCloseBtn" type="button">Close tutorial</button>
+        <button id="tutorialMinimizeBtn" type="button"
+                aria-label="Minimize tutorial">Minimize</button>
         <span class="tutorial-navigation-spacer"></span>
         <button id="tutorialBackBtn" type="button">Back</button>
         <button id="tutorialNextBtn" type="button">Continue</button>

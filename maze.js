@@ -16,30 +16,44 @@ const MAZE_LEVELS = {
         url: "mazes/default.txt",
         rows: 11,
         columns: 11,
+        style: "perfect",
     },
     easy: {
         label: "Easy",
         url: "mazes/easy_winding.txt",
         rows: 11,
         columns: 15,
+        style: "perfect",
     },
     medium: {
         label: "Medium",
         url: "mazes/medium_crossroads.txt",
-        rows: 17,
-        columns: 23,
+        rows: 15,
+        columns: 19,
+        style: "perfect",
     },
     hard: {
         label: "Hard",
         url: "mazes/hard_switchbacks.txt",
-        rows: 25,
-        columns: 31,
+        rows: 19,
+        columns: 25,
+        style: "perfect",
     },
     expert: {
-        label: "Expert",
+        label: "Loops and islands",
         url: "mazes/expert_archipelago.txt",
-        rows: 29,
-        columns: 39,
+        rows: 21,
+        columns: 29,
+        style: "braided",
+        braid: 0.38,
+    },
+    random: {
+        label: "Random blocks",
+        url: "mazes/blocks_test.txt",
+        rows: 15,
+        columns: 19,
+        style: "blocks",
+        blockDensity: 0.42,
     },
 };
 
@@ -384,6 +398,18 @@ function setMazeStatus(message, isError = false) {
     mazeStatus.classList.toggle("error", isError);
 }
 
+function clearMazeChoicePrompt() {
+    document.getElementById("mazeControls").classList.remove("maze-controls-prompt");
+}
+
+function showMazeChoicePrompt() {
+    document.getElementById("mazeControls").classList.add("maze-controls-prompt");
+    setMazeStatus(
+        "Tutorial complete. The tutorial maze is still loaded. Use the Maze menu " +
+        "to load another type, or generate a fresh layout when you are ready.",
+    );
+}
+
 function setMazeControlsEnabled(enabled) {
     document.getElementById("mazeSelect").disabled = !enabled;
     document.getElementById("generateMazeBtn").disabled = !enabled;
@@ -423,6 +449,7 @@ async function loadPresetMaze(level) {
     const config = MAZE_LEVELS[level];
     if (!config) return;
 
+    clearMazeChoicePrompt();
     const changeId = ++mazeChangeCounter;
     setMazeChangeInProgress(true);
     setMazeStatus(`Loading ${config.label.toLowerCase()}…`);
@@ -449,6 +476,7 @@ async function generateNewMaze(level = currentMazeLevel) {
     const config = MAZE_LEVELS[generatedLevel];
     if (!config) return;
 
+    clearMazeChoicePrompt();
     const changeId = ++mazeChangeCounter;
     setMazeChangeInProgress(true);
     setMazeStatus(`Generating a new ${config.label.toLowerCase()} maze…`);
@@ -459,12 +487,20 @@ async function generateNewMaze(level = currentMazeLevel) {
 
         pyodide.globals.set("PMG_GENERATED_ROWS", config.rows);
         pyodide.globals.set("PMG_GENERATED_COLUMNS", config.columns);
+        pyodide.globals.set("PMG_GENERATED_STYLE", config.style);
+        pyodide.globals.set("PMG_GENERATED_BRAID", config.braid ?? 0.15);
+        pyodide.globals.set(
+            "PMG_GENERATED_BLOCK_DENSITY",
+            config.blockDensity ?? 0.32,
+        );
         const generatedText = await pyodide.runPythonAsync(`
 PMG_MAZE_GENERATOR.maze_to_text(
     PMG_MAZE_GENERATOR.generate_maze(
         PMG_GENERATED_ROWS,
         PMG_GENERATED_COLUMNS,
-        style="perfect",
+        style=PMG_GENERATED_STYLE,
+        braid=PMG_GENERATED_BRAID,
+        block_density=PMG_GENERATED_BLOCK_DENSITY,
     )
 )
 `);
@@ -623,14 +659,18 @@ document.getElementById("generateMazeBtn").addEventListener("click", () => {
     generateNewMaze();
 });
 
-// Tutorials always use the known fixed maze. Completing a tutorial starts an
-// independent exercise on a newly generated easy maze.
+// Tutorials always use the known fixed maze. It stays loaded afterward so the
+// learner can choose when and how to move on to another maze.
 document.addEventListener("tutorial:start", () => {
+    clearMazeChoicePrompt();
     if (currentMazeLevel !== "tutorial") loadPresetMaze("tutorial");
 });
 
-document.addEventListener("tutorial:complete", () => {
-    generateNewMaze("easy");
+document.addEventListener("tutorial:complete", async () => {
+    if (currentMazeLevel !== "tutorial") {
+        await loadPresetMaze("tutorial");
+    }
+    if (currentMazeLevel === "tutorial") showMazeChoicePrompt();
 });
 
 globalThis.mazeGame = {

@@ -7,26 +7,28 @@
 
 const tutorialDefinitions = {
     programming: {
-        label: "Introduction to programming",
+        label: "New to coding",
         steps: [
             {
                 target: "#mazeCanvas",
-                title: "Maze objective",
+                title: "A program is a set of instructions",
                 body: `
-                    <p>Move the blue triangle from the top-left starting square to
-                    the green square near the bottom right.</p>
-                    <p>You will write instructions in the Python editor. The
-                    triangle starts by facing right.</p>
+                    <p>Your goal is to move the blue triangle from its starting
+                    square to the green goal square.</p>
+                    <p>A computer follows instructions exactly. You will write those
+                    instructions as a <strong>program</strong> in the Python editor.
+                    The triangle starts by facing right.</p>
                 `,
             },
             {
                 target: "#code",
-                title: "Run a command",
+                title: "Your first Python command",
                 body: `
-                    <p><code>move()</code> tells the triangle to move forward by one
-                    square.</p>
-                    <p>Enter it in the editor, or use the button below to insert the
-                    example.</p>
+                    <p><code>move()</code> tells the triangle to move forward one
+                    square. A named instruction like this is called a
+                    <strong>function</strong>; the parentheses tell Python to run it.</p>
+                    <p>Python needs the spelling and punctuation to be exact. Enter
+                    the command, or insert the example below.</p>
                 `,
                 code: "move()",
             },
@@ -34,8 +36,10 @@ const tutorialDefinitions = {
                 target: "#runBtn",
                 title: "Run the program",
                 body: `
-                    <p>Select <strong>Run program</strong>. Python reads the commands
-                    from top to bottom and the triangle should move one square.</p>
+                    <p>Select <strong>Run program</strong>. Python reads the editor
+                    from top to bottom. The triangle should move one square.</p>
+                    <p>Every run starts the triangle at the beginning, so it is safe
+                    to experiment.</p>
                 `,
                 requiresRun: true,
                 validate: result => !result.hadError && countActions(result, "move") >= 1,
@@ -43,20 +47,22 @@ const tutorialDefinitions = {
             },
             {
                 target: "#code",
-                title: "Turn and move",
+                title: "Commands run in order",
                 body: `
-                    <p>Each command is placed on its own line. This program turns
-                    right, then moves forward twice.</p>
-                    <p>Each run starts the triangle from its original position.</p>
+                    <p>Put each command on its own line. Python runs the first line,
+                    then the next. Lines beginning with <code>#</code> are notes for
+                    people, called <strong>comments</strong>.</p>
+                    <p><code>print()</code> writes a message in the Output panel but
+                    does not move the triangle.</p>
                 `,
-                code: "turn_right()\nmove()\nmove()",
+                code: "# Python reads from top to bottom\nturn_right()\nmove()\nmove()\nprint(\"Sequence finished\")",
             },
             {
                 target: "#runBtn",
                 title: "Run the sequence",
                 body: `
-                    <p>Run the program and check that the commands happen in the
-                    order in which they are written.</p>
+                    <p>Run the program. Check that the triangle turns, moves twice,
+                    and that the printed message appears in Output.</p>
                 `,
                 requiresRun: true,
                 validate: result => (
@@ -68,13 +74,14 @@ const tutorialDefinitions = {
             },
             {
                 target: "#code",
-                title: "Check before moving",
+                title: "Make a decision with if",
                 body: `
-                    <p>An <code>if</code> statement chooses an instruction based on a
-                    condition. <code>path_ahead()</code> is true when the square in
-                    front is open.</p>
-                    <p>The indented lines belong to the <code>if</code> and
-                    <code>else</code> sections.</p>
+                    <p><code>path_ahead()</code> asks a question and gives the answer
+                    <code>True</code> or <code>False</code>. An <code>if</code>
+                    statement uses that answer to choose what to do.</p>
+                    <p>The colon starts a block. The four spaces before
+                    <code>move()</code> and <code>turn_right()</code> show which
+                    instructions belong to each choice.</p>
                 `,
                 code: "if path_ahead():\n    move()\nelse:\n    turn_right()",
             },
@@ -82,8 +89,10 @@ const tutorialDefinitions = {
                 target: "#runBtn",
                 title: "Run the condition",
                 body: `
-                    <p>Run the program. The path starts open, so Python should use
-                    the indented <code>move()</code> instruction.</p>
+                    <p>The starting path is open, so the question is
+                    <code>True</code> and Python should run <code>move()</code>.</p>
+                    <p>If Python reports an error, compare the colon and spaces with
+                    the example.</p>
                 `,
                 requiresRun: true,
                 validate: result => !result.hadError && countActions(result, "move") >= 1,
@@ -91,11 +100,12 @@ const tutorialDefinitions = {
             },
             {
                 target: "#code",
-                title: "Repeat an instruction",
+                title: "Repeat with while",
                 body: `
                     <p>A <code>while</code> loop repeats its indented instructions
                     while a condition is true.</p>
-                    <p>This example moves forward until the triangle reaches a wall.</p>
+                    <p>This program keeps asking whether the path is open. It moves
+                    while the answer is <code>True</code>, then stops before the wall.</p>
                 `,
                 code: "while path_ahead():\n    move()",
             },
@@ -103,80 +113,136 @@ const tutorialDefinitions = {
                 target: "#runBtn",
                 title: "Run the loop",
                 body: `
-                    <p>Run the program. The triangle should move several squares and
-                    stop before the wall.</p>
+                    <p>Run the program. One short loop should make the triangle move
+                    several squares and stop safely before the wall.</p>
                 `,
                 requiresRun: true,
                 validate: result => !result.hadError && countActions(result, "move") >= 3,
                 failure: "The loop did not move to the first wall. Check the indentation and try again.",
             },
             {
-                target: "#referenceTabs",
-                title: "Continue independently",
+                target: "#mazeControls",
+                title: "Choose what comes next",
                 body: `
-                    <p>To solve the complete maze, combine a
-                    <code>while not at_goal():</code> loop with the path checks,
-                    movement commands and turns.</p>
-                    <p>The tutorial will now close and a new maze will be generated.
-                    Continue in the editor without tutorial prompts and use the
-                    reference information below when needed.</p>
+                    <p>You now know the central Python ideas for this activity:
+                    function calls, top-to-bottom order, comments, output, decisions
+                    and loops.</p>
+                    <p>To solve the maze, combine
+                    <code>while not at_goal():</code> with the path questions,
+                    movement commands and turns. The <strong>Beginner Guide</strong>
+                    below builds this up one stage at a time.</p>
+                    <p>The tutorial maze will remain loaded when this guidance
+                    closes. Keep working on it, or use the <strong>Maze</strong>
+                    menu to load another difficulty or special type.</p>
                 `,
                 final: true,
             },
         ],
     },
     python: {
-        label: "Introduction to Python",
+        label: "New to Python",
         steps: [
             {
                 target: "#mazeCanvas",
-                title: "Maze objective",
+                title: "The task and program state",
                 body: `
                     <p>Write a Python program that moves the blue triangle from the
                     top-left starting square to the green goal square.</p>
-                    <p>The triangle starts facing right, and each run resets its
-                    position.</p>
+                    <p>The triangle starts facing right. Each run resets its position
+                    and direction before executing your code from top to bottom.</p>
                 `,
             },
             {
                 target: "#code",
-                title: "Python block syntax",
+                title: "Calls, comments and output",
                 body: `
-                    <p>Python ends conditions with a colon and uses indentation
-                    instead of braces to define a block.</p>
-                    <p>This loop moves forward until the path is blocked.</p>
+                    <p>Call a function with parentheses, such as
+                    <code>move()</code>. A line beginning with <code>#</code> is a
+                    comment, and <code>print()</code> writes to the Output panel.</p>
+                `,
+                code: "# Function calls use parentheses\nmove()\nprint(\"Moved one square\")",
+            },
+            {
+                target: "#runBtn",
+                title: "Run the first example",
+                body: `
+                    <p>Run the program. The maze shows the function's effect, while
+                    printed text and errors appear in Output.</p>
+                `,
+                requiresRun: true,
+                validate: result => !result.hadError && countActions(result, "move") >= 1,
+                failure: "The example did not move one square. Restore the example, check the parentheses and try again.",
+            },
+            {
+                target: "#code",
+                title: "Booleans and indented blocks",
+                body: `
+                    <p>The path functions return the Boolean values
+                    <code>True</code> or <code>False</code>. Python starts a block with
+                    a colon and groups it using consistent indentation rather than
+                    braces.</p>
+                    <p><code>elif</code> checks another condition only when earlier
+                    conditions were false; <code>else</code> is the fallback.</p>
+                `,
+                code: "if path_right():\n    turn_right()\n    move()\nelif path_ahead():\n    move()\nelse:\n    turn_left()",
+            },
+            {
+                target: "#runBtn",
+                title: "Run the decision",
+                body: `
+                    <p>Run the program. Exactly one branch should be chosen. On the
+                    tutorial maze, the right-hand path is open at the start.</p>
+                `,
+                requiresRun: true,
+                validate: result => (
+                    !result.hadError &&
+                    result.actions.includes("turnRight") &&
+                    countActions(result, "move") >= 1
+                ),
+                failure: "The expected right turn and movement did not complete. Check the colon and indentation, then try again.",
+            },
+            {
+                target: "#code",
+                title: "Repeat a block with while",
+                body: `
+                    <p>A <code>while</code> loop repeats its block for as long as its
+                    condition is <code>True</code>. This one stops when the path ahead
+                    becomes blocked.</p>
                 `,
                 code: "while path_ahead():\n    move()\n\nprint(\"Stopped before the wall\")",
             },
             {
                 target: "#runBtn",
-                title: "Run the example",
+                title: "Run the loop",
                 body: `
-                    <p>Run the program. Movement is shown on the maze, and
-                    <code>print()</code> output appears in the Output panel.</p>
+                    <p>Run the program. The triangle should move to the first wall,
+                    then the line after the loop should print once.</p>
                 `,
                 requiresRun: true,
                 validate: result => !result.hadError && countActions(result, "move") >= 3,
-                failure: "The example did not complete successfully. Check the colon and indentation, then try again.",
+                failure: "The loop did not reach the first wall. Check its colon and four-space indentation, then try again.",
             },
             {
-                target: "#referenceTabs",
-                title: "Continue independently",
+                target: "#mazeControls",
+                title: "Choose what comes next",
                 body: `
-                    <p>Use <code>move()</code>, <code>turn_left()</code> and
-                    <code>turn_right()</code> to act. Use the four
-                    <code>path_...()</code> functions to inspect adjacent squares and
-                    <code>at_goal()</code> to stop.</p>
-                    <p>The tutorial will now close and a new maze will be generated.
-                    The full API and examples remain available in the reference
-                    information below.</p>
+                    <p>You have seen Python calls, comments, output, Boolean
+                    conditions, <code>if</code>/<code>elif</code>/<code>else</code>,
+                    indentation and <code>while</code> loops.</p>
+                    <p>A complete solver commonly starts with
+                    <code>while not at_goal():</code>. Use the
+                    <strong>Beginner Guide</strong> for a staged solver or
+                    <strong>Maze API &amp; Help</strong> for a concise function reference.</p>
+                    <p>The tutorial maze will remain loaded. You can keep solving
+                    it, use the <strong>Maze</strong> menu to load another type, or
+                    select <strong>Generate new maze</strong> for a fresh layout.</p>
                 `,
                 final: true,
             },
         ],
     },
     instructions: {
-        label: "Instructions only",
+        label: "Quick start",
         steps: [
             {
                 target: "#mazeCanvas",
@@ -188,8 +254,8 @@ const tutorialDefinitions = {
                 `,
             },
             {
-                target: "#code",
-                title: "Available functions",
+                target: "#mazeControls",
+                title: "Functions and maze choices",
                 body: `
                     <ul>
                         <li>Act: <code>move()</code>, <code>turn_left()</code>,
@@ -199,9 +265,11 @@ const tutorialDefinitions = {
                         <code>path_right()</code></li>
                         <li>Finish condition: <code>at_goal()</code></li>
                     </ul>
-                    <p>Errors and printed text appear in the Output panel. Finishing
-                    these instructions generates a new maze for independent use.
-                    The full reference remains available below.</p>
+                    <p>Errors and printed text appear in the Output panel. The
+                    tutorial maze will remain loaded when these instructions close.</p>
+                    <p>Use the <strong>Maze</strong> menu to load another type, or
+                    <strong>Generate new maze</strong> to create a fresh layout for
+                    the selected type.</p>
                 `,
                 final: true,
             },
@@ -215,20 +283,24 @@ const toolbar = document.getElementById("tutorialToolbar");
 const status = document.getElementById("tutorialStatus");
 const backdrop = document.getElementById("tutorialBackdrop");
 const coachmark = document.getElementById("tutorialCoachmark");
+const mazeCanvas = document.getElementById("mazeCanvas");
 const stepCount = document.getElementById("tutorialStepCount");
 const stepTitle = document.getElementById("tutorialStepTitle");
 const stepBody = document.getElementById("tutorialStepBody");
 const feedback = document.getElementById("tutorialFeedback");
 const insertCodeButton = document.getElementById("tutorialInsertCodeBtn");
 const closeTutorialButton = document.getElementById("tutorialCloseBtn");
+const minimizeTutorialButton = document.getElementById("tutorialMinimizeBtn");
 const backButton = document.getElementById("tutorialBackBtn");
 const nextButton = document.getElementById("tutorialNextBtn");
+const resumeButton = document.getElementById("resumeTutorialBtn");
 const restartButton = document.getElementById("restartTutorialBtn");
 const changeButton = document.getElementById("changeTutorialBtn");
 
 let currentMode = null;
 let currentStepIndex = 0;
 let tutorialIsOpen = false;
+let tutorialIsMinimized = false;
 let highlightedElement = null;
 let resumeAfterSelector = false;
 
@@ -262,8 +334,13 @@ function clearHighlight() {
     }
 }
 
+function clearRunningMazeHighlight() {
+    mazeCanvas.classList.remove("tutorial-maze-running");
+}
+
 function hideCoachmark() {
     clearHighlight();
+    clearRunningMazeHighlight();
     backdrop.hidden = true;
     coachmark.hidden = true;
     window.removeEventListener("resize", positionCoachmark);
@@ -276,6 +353,8 @@ function updateStatus(completed = false) {
 
     if (completed) {
         status.textContent = `${tutorial.label} — guidance closed; working independently`;
+    } else if (tutorialIsMinimized) {
+        status.textContent = `${tutorial.label} — minimized at ${currentStepIndex + 1} of ${tutorial.steps.length}`;
     } else {
         status.textContent = `${tutorial.label} — ${currentStepIndex + 1} of ${tutorial.steps.length}`;
     }
@@ -294,22 +373,72 @@ function positionCoachmark() {
     const targetRect = highlightedElement.getBoundingClientRect();
     const cardRect = coachmark.getBoundingClientRect();
     const availableBelow = window.innerHeight - targetRect.bottom;
+    const availableRight = window.innerWidth - targetRect.right;
 
     let top;
+    let left;
     if (availableBelow >= cardRect.height + margin) {
         top = targetRect.bottom + margin;
+        left = targetRect.left + (targetRect.width - cardRect.width) / 2;
+    } else if (targetRect.top >= cardRect.height + margin) {
+        top = targetRect.top - cardRect.height - margin;
+        left = targetRect.left + (targetRect.width - cardRect.width) / 2;
+    } else if (availableRight >= cardRect.width + margin) {
+        top = targetRect.top + (targetRect.height - cardRect.height) / 2;
+        left = targetRect.right + margin;
+    } else if (targetRect.left >= cardRect.width + margin) {
+        top = targetRect.top + (targetRect.height - cardRect.height) / 2;
+        left = targetRect.left - cardRect.width - margin;
     } else {
-        top = Math.max(margin, targetRect.top - cardRect.height - margin);
+        top = availableBelow >= targetRect.top
+            ? targetRect.bottom + margin
+            : targetRect.top - cardRect.height - margin;
+        left = targetRect.left + (targetRect.width - cardRect.width) / 2;
     }
 
-    const idealLeft = targetRect.left + (targetRect.width - cardRect.width) / 2;
-    const left = Math.max(
+    top = Math.max(
         margin,
-        Math.min(idealLeft, window.innerWidth - cardRect.width - margin),
+        Math.min(top, window.innerHeight - cardRect.height - margin),
+    );
+    left = Math.max(
+        margin,
+        Math.min(left, window.innerWidth - cardRect.width - margin),
     );
 
     coachmark.style.top = `${top}px`;
     coachmark.style.left = `${left}px`;
+}
+
+function showCoachmark() {
+    const step = currentStep();
+    if (!step) return;
+
+    highlightedElement = document.querySelector(step.target);
+    if (!highlightedElement) {
+        finishTutorial();
+        return;
+    }
+
+    const narrowScreen = window.matchMedia("(max-width: 600px)").matches;
+    highlightedElement.scrollIntoView({
+        block: narrowScreen ? "start" : "center",
+        inline: "nearest",
+    });
+    highlightedElement.classList.add("tutorial-highlight");
+
+    backdrop.hidden = false;
+    coachmark.hidden = false;
+    resumeButton.hidden = true;
+    tutorialIsOpen = true;
+    tutorialIsMinimized = false;
+    updateStatus();
+
+    window.addEventListener("resize", positionCoachmark);
+    window.addEventListener("scroll", positionCoachmark, true);
+    requestAnimationFrame(() => {
+        positionCoachmark();
+        coachmark.focus({preventScroll: true});
+    });
 }
 
 function renderStep() {
@@ -318,15 +447,6 @@ function renderStep() {
     if (!tutorial || !step) return;
 
     hideCoachmark();
-
-    highlightedElement = document.querySelector(step.target);
-    if (!highlightedElement) {
-        finishTutorial();
-        return;
-    }
-
-    highlightedElement.scrollIntoView({block: "center", inline: "nearest"});
-    highlightedElement.classList.add("tutorial-highlight");
 
     stepCount.textContent = `${tutorial.label} · ${currentStepIndex + 1} of ${tutorial.steps.length}`;
     stepTitle.textContent = step.title;
@@ -339,17 +459,7 @@ function renderStep() {
     nextButton.disabled = Boolean(step.requiresRun);
     nextButton.textContent = step.final ? "Finish tutorial" : "Continue";
 
-    backdrop.hidden = false;
-    coachmark.hidden = false;
-    tutorialIsOpen = true;
-    updateStatus();
-
-    window.addEventListener("resize", positionCoachmark);
-    window.addEventListener("scroll", positionCoachmark, true);
-    requestAnimationFrame(() => {
-        positionCoachmark();
-        coachmark.focus({preventScroll: true});
-    });
+    showCoachmark();
 }
 
 function startTutorial(mode) {
@@ -358,6 +468,8 @@ function startTutorial(mode) {
     currentMode = mode;
     currentStepIndex = 0;
     tutorialIsOpen = true;
+    tutorialIsMinimized = false;
+    resumeButton.hidden = true;
     toolbar.hidden = false;
     document.dispatchEvent(new CustomEvent("tutorial:start", {detail: {mode}}));
     renderStep();
@@ -365,6 +477,8 @@ function startTutorial(mode) {
 
 function finishTutorial(completed = false) {
     tutorialIsOpen = false;
+    tutorialIsMinimized = false;
+    resumeButton.hidden = true;
     hideCoachmark();
     updateStatus(true);
 
@@ -380,7 +494,7 @@ function finishTutorial(completed = false) {
 }
 
 function openSelector() {
-    resumeAfterSelector = tutorialIsOpen;
+    resumeAfterSelector = tutorialIsOpen && !tutorialIsMinimized;
     hideCoachmark();
     closeSelectorButton.hidden = !currentMode;
 
@@ -466,9 +580,24 @@ nextButton.addEventListener("click", () => {
 
 closeTutorialButton.addEventListener("click", () => {
     const shouldClose = window.confirm(
-        "Close the tutorial guidance? You can restart it from the top of the page.",
+        "Close the tutorial guidance? You can restart it below the help tabs.",
     );
     if (shouldClose) finishTutorial();
+});
+
+minimizeTutorialButton.addEventListener("click", () => {
+    if (!tutorialIsOpen) return;
+
+    tutorialIsMinimized = true;
+    hideCoachmark();
+    resumeButton.hidden = false;
+    updateStatus();
+    resumeButton.focus({preventScroll: true});
+});
+
+resumeButton.addEventListener("click", () => {
+    if (!tutorialIsOpen || !tutorialIsMinimized) return;
+    showCoachmark();
 });
 
 restartButton.addEventListener("click", () => {
@@ -480,11 +609,16 @@ changeButton.addEventListener("click", openSelector);
 document.addEventListener("maze:run-start", () => {
     const step = currentStep();
     if (!tutorialIsOpen || !step?.requiresRun) return;
+
+    if (!tutorialIsMinimized) {
+        mazeCanvas.classList.add("tutorial-maze-running");
+    }
     nextButton.disabled = true;
     setFeedback("Program running…");
 });
 
 document.addEventListener("maze:run-complete", event => {
+    clearRunningMazeHighlight();
     const step = currentStep();
     if (!tutorialIsOpen || !step?.requiresRun) return;
 
@@ -502,5 +636,10 @@ document.addEventListener("maze:run-complete", event => {
 
     positionCoachmark();
 });
+
+document.getElementById("resetBtn").addEventListener(
+    "click",
+    clearRunningMazeHighlight,
+);
 
 openSelector();

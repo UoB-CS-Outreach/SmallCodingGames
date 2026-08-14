@@ -15,6 +15,21 @@ body {
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
+.app-header {
+    text-align: center;
+}
+
+.app-header h1 {
+    margin: 0;
+}
+
+.app-subtitle {
+    margin: 4px 0 0;
+    color: #4c5963;
+    font-size: 16px;
+    white-space: nowrap;
+}
+
 .row {
     margin-top: 12px;
     padding-top: 12px;
@@ -59,6 +74,11 @@ body {
     flex-wrap: wrap;
     gap: 8px;
     margin-top: 10px;
+}
+
+#mazeControls.maze-controls-prompt {
+    border-radius: 5px;
+    box-shadow: 0 0 0 4px rgba(23, 105, 170, 0.28);
 }
 
 #mazeControls select,
@@ -217,6 +237,11 @@ textarea {
 }
 
 .tabs-content {
+    height: clamp(240px, 32vh, 340px);
+    box-sizing: border-box;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
     border: 1px solid #c8c8c8;
     border-top: none;
     background: #fafafa;
@@ -252,6 +277,11 @@ textarea {
 
 .tabs-content code {
     font-family: "Fira Code", Consolas, monospace;
+}
+
+.tabs-content:focus-visible {
+    outline: 3px solid #1769aa;
+    outline-offset: 2px;
 }
 
 .tab-section + .tab-section {
@@ -321,6 +351,10 @@ textarea {
     display: none;
 }
 
+.tutorial-toolbar:has(#resumeTutorialBtn:not([hidden])) {
+    padding-bottom: 58px;
+}
+
 .tutorial-toolbar p {
     margin: 0;
     font-size: 14px;
@@ -330,6 +364,21 @@ textarea {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+}
+
+#resumeTutorialBtn {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 899;
+    border-color: #155f96;
+    background: #1769aa;
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.24);
+}
+
+#resumeTutorialBtn:hover {
+    background: #11598f;
 }
 
 .tutorial-toolbar button,
@@ -431,7 +480,8 @@ textarea {
     display: none;
 }
 
-.tutorial-highlight {
+.tutorial-highlight,
+.tutorial-maze-running {
     position: relative !important;
     z-index: 901 !important;
     outline: 4px solid #ffffff;
