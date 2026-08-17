@@ -3,10 +3,78 @@
 import unittest
 from pathlib import Path
 
-from maze_generator import find_solution, generate_maze, validate_maze
+from maze_generator import (
+    DIFFICULTIES,
+    count_junctions,
+    count_passage_loops,
+    find_solution,
+    generate_difficulty,
+    generate_maze,
+    validate_maze,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+# 0 = up, 1 = right, 2 = down, 3 = left, matching maze.py.
+DIRECTIONS = [(-1, 0), (0, 1), (1, 0), (0, -1)]
+
+# The strategies taught in the Beginner Guide, as (relative direction to try,
+# whether to turn that way first) pairs. The final fallback is turning left.
+FORWARD_FIRST_RULE = (0, 1)
+RIGHT_HAND_RULE = (1, 0)
+
+
+def solve_with_rule(maze, rule, step_limit=20000):
+    """Return True if a relative-direction rule reaches the goal.
+
+    This mirrors the maze API available to participants: the player starts on
+    ``S`` facing right and can only ask about the squares around it.
+    """
+    positions = {
+        character: (row, column)
+        for row, line in enumerate(maze)
+        for column, character in enumerate(line)
+        if character in "SG"
+    }
+    row, column = positions["S"]
+    direction = 1
+
+    def path_open(offset):
+        row_delta, column_delta = DIRECTIONS[(direction + offset) % 4]
+        next_row, next_column = row + row_delta, column + column_delta
+        return maze[next_row][next_column] != "#"
+
+    for _ in range(step_limit):
+        if (row, column) == positions["G"]:
+            return True
+
+        for offset in rule:
+            if not path_open(offset):
+                continue
+            direction = (direction + offset) % 4
+            row_delta, column_delta = DIRECTIONS[direction]
+            row, column = row + row_delta, column + column_delta
+            break
+        else:
+            direction = (direction - 1) % 4
+
+    return False
+
+
+def count_dead_ends(maze):
+    rows, columns = len(maze), len(maze[0])
+    return sum(
+        sum(
+            maze[row + row_delta][column + column_delta] != "#"
+            for row_delta, column_delta in DIRECTIONS
+            if 0 <= row + row_delta < rows and 0 <= column + column_delta < columns
+        )
+        == 1
+        for row in range(rows)
+        for column in range(columns)
+        if maze[row][column] != "#"
+    )
 
 
 class MazeGeneratorTests(unittest.TestCase):
@@ -34,6 +102,23 @@ class MazeGeneratorTests(unittest.TestCase):
             sum(line.count("#") for line in perfect),
         )
 
+    def test_braided_maze_always_contains_a_loop(self):
+        for seed in range(30):
+            with self.subTest(seed=seed):
+                maze = generate_maze(11, 11, seed=seed, style="braided", braid=0.05)
+                self.assertGreaterEqual(count_passage_loops(maze), 1)
+
+    def test_rooms_open_space_and_need_a_braided_maze(self):
+        without_rooms = generate_maze(21, 31, seed=7, style="braided")
+        with_rooms = generate_maze(21, 31, seed=7, style="braided", rooms=3)
+
+        self.assertLess(
+            sum(line.count("#") for line in with_rooms),
+            sum(line.count("#") for line in without_rooms),
+        )
+        with self.assertRaisesRegex(ValueError, "open rooms"):
+            generate_maze(21, 31, style="perfect", rooms=2)
+
     def test_random_blocks_style_always_has_a_route(self):
         for seed in range(25):
             with self.subTest(seed=seed):
@@ -46,11 +131,94 @@ class MazeGeneratorTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "odd dimensions"):
             generate_maze(10, 11, style="perfect")
 
+    def test_unknown_difficulty_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "Unknown difficulty"):
+            generate_difficulty("impossible")
+
     def test_checked_in_maps_are_valid(self):
         for path in sorted((PROJECT_ROOT / "mazes").glob("*.txt")):
             with self.subTest(map=path.name):
                 maze = path.read_text(encoding="utf-8").splitlines()
                 validate_maze(maze)
+
+
+class DifficultyStructureTests(unittest.TestCase):
+    """Each difficulty must introduce the concept the guide claims it does."""
+
+    SEEDS = range(20)
+
+    def test_easy_is_one_winding_corridor(self):
+        for seed in self.SEEDS:
+            with self.subTest(seed=seed):
+                maze = generate_difficulty("easy", seed=seed)
+                self.assertEqual(count_junctions(maze), 0)
+                self.assertEqual(count_passage_loops(maze), 0)
+                # Only the start and the goal are dead ends.
+                self.assertEqual(count_dead_ends(maze), 2)
+                self.assertGreater(len(find_solution(maze)), 20)
+
+    def test_medium_adds_junctions_and_dead_ends_but_no_loops(self):
+        for seed in self.SEEDS:
+            with self.subTest(seed=seed):
+                maze = generate_difficulty("medium", seed=seed)
+                self.assertGreater(count_junctions(maze), 0)
+                self.assertGreater(count_dead_ends(maze), 2)
+                self.assertEqual(count_passage_loops(maze), 0)
+
+    def test_hard_and_expert_add_loops(self):
+        for seed in self.SEEDS:
+            with self.subTest(seed=seed):
+                self.assertGreaterEqual(
+                    count_passage_loops(generate_difficulty("hard", seed=seed)), 1
+                )
+                self.assertGreaterEqual(
+                    count_passage_loops(generate_difficulty("expert", seed=seed)), 1
+                )
+
+    def test_expert_is_more_open_than_hard(self):
+        hard = sum(
+            count_passage_loops(generate_difficulty("hard", seed=seed))
+            for seed in self.SEEDS
+        )
+        expert = sum(
+            count_passage_loops(generate_difficulty("expert", seed=seed))
+            for seed in self.SEEDS
+        )
+        self.assertGreater(expert, hard)
+
+    def test_difficulties_grow_in_size(self):
+        areas = [
+            int(preset["rows"]) * int(preset["columns"])
+            for preset in DIFFICULTIES.values()
+        ]
+        self.assertEqual(areas, sorted(areas))
+
+
+class TaughtStrategyTests(unittest.TestCase):
+    """The guide promises a guarantee up to medium, and only up to medium."""
+
+    SEEDS = range(30)
+
+    def test_forward_first_rule_solves_every_easy_maze(self):
+        for seed in self.SEEDS:
+            with self.subTest(seed=seed):
+                maze = generate_difficulty("easy", seed=seed)
+                self.assertTrue(solve_with_rule(maze, FORWARD_FIRST_RULE))
+
+    def test_right_hand_rule_solves_every_easy_and_medium_maze(self):
+        for level in ("easy", "medium"):
+            for seed in self.SEEDS:
+                with self.subTest(level=level, seed=seed):
+                    maze = generate_difficulty(level, seed=seed)
+                    self.assertTrue(solve_with_rule(maze, RIGHT_HAND_RULE))
+
+    def test_harder_mazes_can_defeat_the_right_hand_rule(self):
+        failures = sum(
+            not solve_with_rule(generate_difficulty(level, seed=seed), RIGHT_HAND_RULE)
+            for level in ("hard", "expert")
+            for seed in self.SEEDS
+        )
+        self.assertGreater(failures, 0)
 
 
 if __name__ == "__main__":

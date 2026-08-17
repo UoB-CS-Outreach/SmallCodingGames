@@ -1,0 +1,237 @@
+/*
+ * Challenge mode panel.
+ *
+ * Every selector here is scoped to the component's own class names, or to the
+ * #challenge-mode mount point, so that the rest of the page can be restyled
+ * without colliding with this file. Colours follow the existing UI: light
+ * panels, the #1769aa blue accent, and green/red only for pass and fail.
+ */
+
+#challenge-mode {
+    margin-top: 12px;
+}
+
+.challenge-panel {
+    padding: 12px 14px;
+    border: 1px solid #c7d3df;
+    border-radius: 6px;
+    background: #f4f8fb;
+    color: #1f252a;
+    font-size: 14px;
+}
+
+.challenge-panel [hidden] {
+    display: none;
+}
+
+.challenge-heading {
+    margin: 0;
+    font-size: 18px;
+}
+
+.challenge-intro {
+    margin: 6px 0 0;
+    max-width: 74ch;
+    color: #3c4750;
+    line-height: 1.45;
+}
+
+/* Controls and the one-line score */
+
+.challenge-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.challenge-start,
+.challenge-stop {
+    padding: 8px 14px;
+    border: 1px solid #56616b;
+    border-radius: 4px;
+    background: #ffffff;
+    color: #1f252a;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.challenge-start:hover,
+.challenge-stop:hover {
+    background: #eef2f5;
+}
+
+.challenge-start:disabled {
+    border-color: #9aa3ab;
+    color: #5d666d;
+    background: #eceff1;
+    cursor: not-allowed;
+}
+
+.challenge-summary {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+/* Progress: one row per difficulty, ten squares per row */
+
+.challenge-progress {
+    margin-top: 12px;
+}
+
+.challenge-status {
+    margin: 0;
+    min-height: 1.4em;
+    color: #3c4750;
+}
+
+.challenge-status-error {
+    color: #9d2d26;
+    font-weight: 600;
+}
+
+.challenge-tier-list {
+    margin: 8px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.challenge-tier {
+    display: grid;
+    grid-template-columns: 72px auto 1fr;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 0;
+    border-top: 1px solid #dbe3ea;
+}
+
+.challenge-tier-name {
+    font-weight: 600;
+}
+
+.challenge-tier-cells {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.challenge-tier-result {
+    color: #3c4750;
+    font-size: 13px;
+}
+
+/*
+  Each square carries a symbol as well as a colour, so pass and fail are not
+  told apart by colour alone.
+*/
+.challenge-cell {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: 26px;
+    height: 26px;
+    border: 1px solid #b9c2ca;
+    border-radius: 4px;
+    background: #ffffff;
+    color: #4c5963;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1;
+}
+
+.challenge-cell[data-state="running"] {
+    border-color: #1769aa;
+    color: #11598f;
+    box-shadow: 0 0 0 2px rgba(23, 105, 170, 0.35);
+}
+
+.challenge-cell[data-state="pass"] {
+    border-color: #27733b;
+    background: #e9f7ec;
+    color: #1c5a2c;
+}
+
+.challenge-cell[data-state="fail"] {
+    border-color: #a33a32;
+    background: #fbeceb;
+    color: #8c2b24;
+}
+
+.challenge-cell[data-state="skipped"] {
+    border-style: dashed;
+    background: #f2f4f6;
+    color: #7b848b;
+}
+
+/* Failure card: the most useful thing on the page when it appears */
+
+.challenge-failure {
+    margin-top: 12px;
+    padding: 12px 14px;
+    border: 1px solid #d8a9a4;
+    border-left: 5px solid #a33a32;
+    border-radius: 5px;
+    background: #fdf3f2;
+}
+
+.challenge-failure-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: #8c2b24;
+}
+
+.challenge-failure-text {
+    margin: 6px 0 0;
+    max-width: 74ch;
+    line-height: 1.45;
+}
+
+.challenge-load {
+    margin-top: 12px;
+    padding: 11px 18px;
+    border: 1px solid #155f96;
+    border-radius: 4px;
+    background: #1769aa;
+    color: #ffffff;
+    font: inherit;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+}
+
+.challenge-load:hover {
+    background: #11598f;
+}
+
+.challenge-load:disabled {
+    background: #8a949c;
+    border-color: #77818a;
+    cursor: wait;
+}
+
+.challenge-note {
+    margin: 10px 0 0;
+    color: #52606b;
+    font-size: 12px;
+}
+
+.challenge-panel button:focus-visible {
+    outline: 3px solid #17222a;
+    outline-offset: 2px;
+}
+
+@media (max-width: 700px) {
+    .challenge-tier {
+        grid-template-columns: 72px 1fr;
+    }
+
+    .challenge-tier-result {
+        grid-column: 1 / -1;
+    }
+}

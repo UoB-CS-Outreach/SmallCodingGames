@@ -5,6 +5,9 @@ functions that the user can call to navigate a maze.
 The actual maze and drawing are handled by JavaScript in maze.js.
 """
 
+import contextlib
+import io
+import json
 import sys
 import time
 
@@ -103,7 +106,144 @@ def reset_state():
     direction = 1
 
 
+# Challenge mode
+#
+# "It worked once" is not the same as "it is correct", so challenge mode runs
+# the same program against many freshly generated mazes. JavaScript drives the
+# loop one maze at a time so the page can keep painting, and calls this once
+# per maze.
+
+
+def run_challenge_maze(src, level, seed, max_steps=15000, max_seconds=2.0):
+    """
+    Run user code against one generated maze and report what happened.
+
+    The maze is built from ``level`` and ``seed``, so the same seed always
+    produces the same maze and a demonstrator can reproduce a failure.
+
+    Nothing is animated: js_enqueue_action is replaced by a counter for the
+    duration of the run, which also gives us the number of moves used. The
+    module-level maze and player state are saved and put back afterwards, so
+    the maze on screen is exactly as the user left it. The result is returned
+    as a JSON string because that is the least fiddly thing for JavaScript to
+    read back out of Pyodide.
+    """
+    global maze, num_rows, num_cols
+    global start_row, start_col, goal_row, goal_col
+    global row, col, direction
+    global js_enqueue_action
+
+    generator = globals().get("PMG_MAZE_GENERATOR")
+    if generator is None:
+        raise RuntimeError("The maze generator has not been loaded yet")
+
+    src = str(src)
+    level = str(level)
+    seed = int(seed)
+    max_steps = int(max_steps)
+    max_seconds = float(max_seconds)
+
+    challenge_maze = [
+        str(line) for line in generator.generate_difficulty(level, seed=seed)
+    ]
+    route = generator.find_solution(challenge_maze)
+    shortest = len(route) - 1 if route else None
+
+    # Everything _sync_maze_from_js() would otherwise own, plus the player.
+    saved_state = (
+        maze,
+        num_rows,
+        num_cols,
+        start_row,
+        start_col,
+        goal_row,
+        goal_col,
+        row,
+        col,
+        direction,
+    )
+    saved_enqueue = js_enqueue_action
+
+    moves = 0
+
+    def count_action(action_type):
+        """Stand in for js_enqueue_action: count moves, animate nothing."""
+        nonlocal moves
+        if action_type == "move":
+            moves += 1
+
+    try:
+        maze = challenge_maze
+        num_rows = len(maze)
+        num_cols = len(maze[0])
+        start_row, start_col = _find_cell(maze, "S")
+        goal_row, goal_col = _find_cell(maze, "G")
+        row, col = start_row, start_col
+        direction = 1
+        js_enqueue_action = count_action
+
+        error = ""
+        # A challenge run executes the program dozens of times, so any print()
+        # inside it would flood the Output panel with one copy per maze.
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                run_user_code(src, max_seconds, max_steps)
+        except Exception as exc:  # noqa: BLE001 - report whatever user code did
+            error = f"{type(exc).__name__}: {exc}"
+
+        # Checked directly rather than through at_goal() so that a user program
+        # which happens to redefine at_goal() cannot mark its own homework.
+        reached = (row == goal_row) and (col == goal_col)
+
+        if reached:
+            reason = "reached"
+        elif "too many steps" in error or "took too long" in error:
+            reason = "stuck"
+        elif error:
+            reason = "error"
+        else:
+            reason = "stopped"
+
+        result = {
+            "level": level,
+            "seed": seed,
+            "reached": reached,
+            "moves": moves,
+            "shortest": shortest,
+            "reason": reason,
+            "error": error,
+            "maze": "\n".join(maze) + "\n",
+        }
+    finally:
+        (
+            maze,
+            num_rows,
+            num_cols,
+            start_row,
+            start_col,
+            goal_row,
+            goal_col,
+            row,
+            col,
+            direction,
+        ) = saved_state
+        js_enqueue_action = saved_enqueue
+
+    return json.dumps(result)
+
+
 # Helper functions
+
+
+def _find_cell(lines, marker):
+    """
+    Return the (row, col) of the first cell holding a marker character.
+    """
+    for r, line in enumerate(lines):
+        c = line.find(marker)
+        if c != -1:
+            return r, c
+    raise ValueError(f"Maze contains no {marker} cell")
 
 
 def _step_forward(r, c, d):

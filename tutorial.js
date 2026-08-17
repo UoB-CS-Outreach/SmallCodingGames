@@ -5,75 +5,66 @@
  * execution continue to be managed by maze.js.
  */
 
+const RIGHT_HAND_ROUND = "if path_right():\n    turn_right()\n    move()\nelif path_ahead():\n    move()\nelse:\n    turn_left()";
+
+const RIGHT_HAND_SOLVER = "while not at_goal():\n    if path_right():\n        turn_right()\n        move()\n    elif path_ahead():\n        move()\n    else:\n        turn_left()";
+
 const tutorialDefinitions = {
     programming: {
         label: "New to coding",
         steps: [
             {
-                target: "#mazeCanvas",
-                title: "A program is a set of instructions",
+                target: "#runBtn",
+                title: "Make something move",
                 body: `
-                    <p>Your goal is to move the blue triangle from its starting
-                    square to the green goal square.</p>
-                    <p>A computer follows instructions exactly. You will write those
-                    instructions as a <strong>program</strong> in the Python editor.
-                    The triangle starts by facing right.</p>
+                    <p>There is already a short program in the editor.</p>
+                    <p>Press <strong>Run program</strong> and watch the blue
+                    triangle.</p>
+                    <p>Greyed out? Python is still loading.</p>
                 `,
+                code: "move()\nmove()\nmove()",
+                autoInsert: true,
+                requiresRun: true,
+                validate: result => !result.hadError && countActions(result, "move") >= 1,
+                failure: "The triangle did not move. Put move() back in the editor, one per line, and press Run program again.",
             },
             {
                 target: "#code",
-                title: "Your first Python command",
+                title: "That was a program",
                 body: `
-                    <p><code>move()</code> tells the triangle to move forward one
-                    square. A named instruction like this is called a
-                    <strong>function</strong>; the parentheses tell Python to run it.</p>
-                    <p>Python needs the spelling and punctuation to be exact. Enter
-                    the command, or insert the example below.</p>
+                    <p>Three instructions. The computer obeyed them exactly, in
+                    order, top to bottom.</p>
+                    <p><code>move()</code> is a <strong>function</strong>: a job with
+                    a name. The brackets mean <em>do it now</em>.</p>
                 `,
-                code: "move()",
-            },
-            {
-                target: "#runBtn",
-                title: "Run the program",
-                body: `
-                    <p>Select <strong>Run program</strong>. Python reads the editor
-                    from top to bottom. The triangle should move one square.</p>
-                    <p>Every run starts the triangle at the beginning, so it is safe
-                    to experiment.</p>
-                `,
-                requiresRun: true,
-                validate: result => !result.hadError && countActions(result, "move") >= 1,
-                failure: "The triangle did not move. Check that the editor contains move() and try again.",
             },
             {
                 target: "#buttons",
-                title: "Controls for experimenting",
+                title: "Run, reset, speed",
                 body: `
-                    <p><strong>Run program</strong> starts again from the maze's
-                    starting square and executes everything in the editor.</p>
-                    <p><strong>Reset position</strong> stops an animation and returns
-                    the triangle to the start. The <strong>Speed</strong> slider changes
-                    only the animation speed, not what the program does.</p>
+                    <p><strong>Run program</strong> always starts again from the
+                    beginning, so you cannot break anything.</p>
+                    <p><strong>Reset position</strong> stops an animation.
+                    <strong>Speed</strong> changes only how fast it is drawn.</p>
                 `,
             },
             {
                 target: "#code",
-                title: "Commands run in order",
+                title: "Turn as well as move",
                 body: `
-                    <p>Put each command on its own line. Python runs the first line,
-                    then the next. Lines beginning with <code>#</code> are notes for
-                    people, called <strong>comments</strong>.</p>
-                    <p><code>print()</code> writes a message in the Output panel but
-                    does not move the triangle.</p>
+                    <p><code>turn_right()</code> and <code>turn_left()</code> turn on
+                    the spot without moving.</p>
+                    <p><code>print()</code> puts a message in Output. A line starting
+                    with <code>#</code> is a note for humans; Python skips it.</p>
                 `,
-                code: "# Python reads from top to bottom\nturn_right()\nmove()\nmove()\nprint(\"Sequence finished\")",
+                code: "# Turn right, then move twice\nturn_right()\nmove()\nmove()\nprint(\"Done\")",
             },
             {
                 target: "#runBtn",
                 title: "Run the sequence",
                 body: `
-                    <p>Run the program. Check that the triangle turns, moves twice,
-                    and that the printed message appears in Output.</p>
+                    <p>Press <strong>Run program</strong>. The triangle should turn
+                    downwards, move two squares, and print your message.</p>
                 `,
                 requiresRun: true,
                 validate: result => (
@@ -81,52 +72,49 @@ const tutorialDefinitions = {
                     result.actions.includes("turnRight") &&
                     countActions(result, "move") >= 2
                 ),
-                failure: "The expected turn and two movements were not completed. Restore the example and try again.",
+                failure: "That did not turn and then move twice. Insert the example again and press Run program.",
             },
             {
                 target: "#output",
-                title: "Read the output",
+                title: "Python talks back here",
                 body: `
-                    <p>The Output box shows text from <code>print()</code>, useful
-                    messages about the result, and any Python errors.</p>
-                    <p>You do not type here. If something goes wrong, read the final
-                    line, correct the code in the editor, and run it again.</p>
+                    <p>Output shows your <code>print()</code> messages, whether you
+                    reached the goal, and any error.</p>
+                    <p>You never type here. When something breaks, read the last line,
+                    fix the editor, run again.</p>
                 `,
             },
             {
                 target: "#code",
-                title: "Make a decision with if",
+                title: "Ask the maze a question",
                 body: `
-                    <p><code>path_ahead()</code> asks a question and gives the answer
-                    <code>True</code> or <code>False</code>. An <code>if</code>
-                    statement uses that answer to choose what to do.</p>
-                    <p>The colon starts a block. The four spaces before
-                    <code>move()</code> and <code>turn_right()</code> show which
-                    instructions belong to each choice.</p>
+                    <p><code>path_ahead()</code> asks: is the next square open? The
+                    answer is <code>True</code> or <code>False</code>.</p>
+                    <p><code>if</code> takes the first block, <code>else</code> the
+                    other. The four spaces show which lines belong to which
+                    choice.</p>
                 `,
                 code: "if path_ahead():\n    move()\nelse:\n    turn_right()",
             },
             {
                 target: "#runBtn",
-                title: "Run the condition",
+                title: "Run the decision",
                 body: `
-                    <p>The starting path is open, so the question is
-                    <code>True</code> and Python should run <code>move()</code>.</p>
-                    <p>If Python reports an error, compare the colon and spaces with
-                    the example.</p>
+                    <p>The way ahead is open, so the answer is <code>True</code> and
+                    the triangle moves.</p>
+                    <p>If Python complains, check the colon and the spaces.</p>
                 `,
                 requiresRun: true,
                 validate: result => !result.hadError && countActions(result, "move") >= 1,
-                failure: "The condition did not complete successfully. Check the colons and indentation, then try again.",
+                failure: "That did not finish cleanly. Check the colons and the four-space indents, then run it again.",
             },
             {
                 target: "#code",
                 title: "Repeat with while",
                 body: `
-                    <p>A <code>while</code> loop repeats its indented instructions
-                    while a condition is true.</p>
-                    <p>This program keeps asking whether the path is open. It moves
-                    while the answer is <code>True</code>, then stops before the wall.</p>
+                    <p><code>while</code> repeats its indented block for as long as
+                    the answer stays <code>True</code>.</p>
+                    <p>Two lines, many moves. You never say how many.</p>
                 `,
                 code: "while path_ahead():\n    move()",
             },
@@ -134,27 +122,55 @@ const tutorialDefinitions = {
                 target: "#runBtn",
                 title: "Run the loop",
                 body: `
-                    <p>Run the program. One short loop should make the triangle move
-                    several squares and stop safely before the wall.</p>
+                    <p>Press <strong>Run program</strong>. The triangle runs down the
+                    corridor and stops itself at the wall.</p>
                 `,
                 requiresRun: true,
                 validate: result => !result.hadError && countActions(result, "move") >= 3,
-                failure: "The loop did not move to the first wall. Check the indentation and try again.",
+                failure: "The loop did not reach the wall. Insert the example again, check the indent, and run it.",
+            },
+            {
+                target: "#runBtn",
+                title: "Keep one hand on the wall",
+                body: `
+                    <p>A rule that works in a real maze: <strong>turn right if you
+                    can; otherwise go straight; otherwise turn left.</strong></p>
+                    <p><code>elif</code> means "otherwise, if" — Python takes the
+                    first branch that fits. Run one round.</p>
+                `,
+                code: RIGHT_HAND_ROUND,
+                requiresRun: true,
+                validate: result => (
+                    !result.hadError &&
+                    result.actions.includes("turnRight") &&
+                    countActions(result, "move") >= 1
+                ),
+                failure: "Expected a right turn and a move. Insert the example again and press Run program.",
+            },
+            {
+                target: "#runBtn",
+                title: "Solve the whole maze",
+                body: `
+                    <p><code>at_goal()</code> is <code>True</code> only on the green
+                    square, and <code>not</code> flips it. So this repeats the rule
+                    until you arrive.</p>
+                    <p>Insert it, press <strong>Run program</strong> and watch.</p>
+                `,
+                code: RIGHT_HAND_SOLVER,
+                requiresRun: true,
+                validate: result => !result.hadError && result.reached === true,
+                failure: "Not on the green square yet. Insert the example again, keeping the rule indented inside the loop, and run it.",
             },
             {
                 target: "#mazeControls",
-                title: "Choose what comes next",
+                title: "You solved the maze",
                 body: `
-                    <p>You now know the central Python ideas for this activity:
-                    function calls, top-to-bottom order, comments, output, decisions
-                    and loops.</p>
-                    <p>To solve the maze, combine
-                    <code>while not at_goal():</code> with the path questions,
-                    movement commands and turns. The <strong>Beginner Guide</strong>
-                    below builds this up one stage at a time.</p>
-                    <p>The tutorial maze will remain loaded when this guidance
-                    closes. Keep working on it, or use the <strong>Maze</strong>
-                    menu to load another difficulty or special type.</p>
+                    <p>Eight lines of Python did that on their own.</p>
+                    <p>Now try to break it. Pick a harder maze from the
+                    <strong>Maze</strong> menu, or <strong>Generate new maze</strong>.
+                    Does your rule still work?</p>
+                    <p>The <strong>Beginner Guide</strong> tab explains what to try
+                    next.</p>
                 `,
                 final: true,
             },
@@ -164,120 +180,88 @@ const tutorialDefinitions = {
         label: "New to Python",
         steps: [
             {
-                target: "#mazeCanvas",
-                title: "The task and program state",
-                body: `
-                    <p>Write a Python program that moves the blue triangle from the
-                    top-left starting square to the green goal square.</p>
-                    <p>The triangle starts facing right. Each run resets its position
-                    and direction before executing your code from top to bottom.</p>
-                `,
-            },
-            {
-                target: "#code",
-                title: "Calls, comments and output",
-                body: `
-                    <p>Call a function with parentheses, such as
-                    <code>move()</code>. A line beginning with <code>#</code> is a
-                    comment, and <code>print()</code> writes to the Output panel.</p>
-                `,
-                code: "# Function calls use parentheses\nmove()\nprint(\"Moved one square\")",
-            },
-            {
                 target: "#runBtn",
-                title: "Run the first example",
+                title: "The whole API",
                 body: `
-                    <p>Run the program. The maze shows the function's effect, while
-                    printed text and errors appear in Output.</p>
+                    <p>Act with <code>move()</code>, <code>turn_left()</code>,
+                    <code>turn_right()</code>. Ask with <code>path_ahead()</code>,
+                    <code>path_left()</code>, <code>path_right()</code>,
+                    <code>path_behind()</code>, <code>at_goal()</code>.</p>
+                    <p>The questions return <code>True</code> or <code>False</code>
+                    and change nothing. Everything is relative to the way the triangle
+                    faces. Press <strong>Run program</strong>.</p>
                 `,
+                code: "print(path_ahead(), path_right(), at_goal())\nmove()",
+                autoInsert: true,
                 requiresRun: true,
                 validate: result => !result.hadError && countActions(result, "move") >= 1,
-                failure: "The example did not move one square. Restore the example, check the parentheses and try again.",
-            },
-            {
-                target: "#buttons",
-                title: "Run, reset and speed",
-                body: `
-                    <p><strong>Run program</strong> resets the triangle and executes
-                    the whole editor. <strong>Reset position</strong> stops an
-                    animation without changing your code.</p>
-                    <p>The <strong>Speed</strong> slider changes how quickly actions
-                    are animated; it does not change Python's decisions.</p>
-                `,
+                failure: "No movement was recorded. Restore the example and run it again.",
             },
             {
                 target: "#output",
                 title: "Output and errors",
                 body: `
-                    <p>This read-only box contains text from <code>print()</code>, the
-                    final maze status, and Python errors.</p>
-                    <p>When debugging, read the final error line first, edit the
-                    Python Code box, and run the program again.</p>
+                    <p>Output holds <code>print()</code> text, the final maze status
+                    and the traceback. Read the last line first.</p>
+                    <p>Every run clears Output and returns the triangle to the top-left
+                    start facing right, so runs are repeatable.</p>
                 `,
             },
             {
                 target: "#code",
-                title: "Booleans and indented blocks",
+                title: "Python, not C or Java",
                 body: `
-                    <p>The path functions return the Boolean values
-                    <code>True</code> or <code>False</code>. Python starts a block with
-                    a colon and groups it using consistent indentation rather than
-                    braces.</p>
-                    <p><code>elif</code> checks another condition only when earlier
-                    conditions were false; <code>else</code> is the fallback.</p>
+                    <p>No braces, no semicolons. A colon opens a block and
+                    <strong>indentation is the syntax</strong> — four spaces here, and
+                    Tab inserts them.</p>
+                    <p><code>True</code> and <code>False</code> are capitalised. Use
+                    <code>and</code>, <code>or</code>, <code>not</code> rather than
+                    <code>&amp;&amp;</code>, <code>||</code>, <code>!</code>. Names are
+                    <code>snake_case</code>.</p>
                 `,
-                code: "if path_right():\n    turn_right()\n    move()\nelif path_ahead():\n    move()\nelse:\n    turn_left()",
             },
             {
-                target: "#runBtn",
-                title: "Run the decision",
+                target: "#code",
+                title: "if / elif / else",
                 body: `
-                    <p>Run the program. Exactly one branch should be chosen. On the
-                    tutorial maze, the right-hand path is open at the start.</p>
+                    <p><code>elif</code> is "else if". Python tests the branches in
+                    order and runs exactly one.</p>
+                    <p>Insert this and run it. The right-hand path is open at the
+                    start, so the first branch wins.</p>
                 `,
+                code: RIGHT_HAND_ROUND,
                 requiresRun: true,
                 validate: result => (
                     !result.hadError &&
                     result.actions.includes("turnRight") &&
                     countActions(result, "move") >= 1
                 ),
-                failure: "The expected right turn and movement did not complete. Check the colon and indentation, then try again.",
+                failure: "Expected a right turn then a move. Restore the example, check the indentation, and run it again.",
             },
             {
                 target: "#code",
-                title: "Repeat a block with while",
+                title: "while not at_goal()",
                 body: `
-                    <p>A <code>while</code> loop repeats its block for as long as its
-                    condition is <code>True</code>. This one stops when the path ahead
-                    becomes blocked.</p>
+                    <p><code>not</code> inverts a Boolean, so this loop repeats until
+                    the triangle stands on the goal.</p>
+                    <p>The same three branches, repeated, are the right-hand wall
+                    follower. Run it and the maze is solved.</p>
                 `,
-                code: "while path_ahead():\n    move()\n\nprint(\"Stopped before the wall\")",
-            },
-            {
-                target: "#runBtn",
-                title: "Run the loop",
-                body: `
-                    <p>Run the program. The triangle should move to the first wall,
-                    then the line after the loop should print once.</p>
-                `,
+                code: RIGHT_HAND_SOLVER,
                 requiresRun: true,
-                validate: result => !result.hadError && countActions(result, "move") >= 3,
-                failure: "The loop did not reach the first wall. Check its colon and four-space indentation, then try again.",
+                validate: result => !result.hadError && result.reached === true,
+                failure: "The triangle did not finish on the goal. Restore the example and check the indentation inside the loop.",
             },
             {
                 target: "#mazeControls",
-                title: "Choose what comes next",
+                title: "Solved — now break it",
                 body: `
-                    <p>You have seen Python calls, comments, output, Boolean
-                    conditions, <code>if</code>/<code>elif</code>/<code>else</code>,
-                    indentation and <code>while</code> loops.</p>
-                    <p>A complete solver commonly starts with
-                    <code>while not at_goal():</code>. Use the
-                    <strong>Beginner Guide</strong> for a staged solver or
-                    <strong>Maze API &amp; Help</strong> for a concise function reference.</p>
-                    <p>The tutorial maze will remain loaded. You can keep solving
-                    it, use the <strong>Maze</strong> menu to load another type, or
-                    select <strong>Generate new maze</strong> for a fresh layout.</p>
+                    <p>Wall following works here because Easy and Medium mazes have no
+                    loops. Hard and Expert do.</p>
+                    <p>Use the <strong>Maze</strong> menu or <strong>Generate new
+                    maze</strong> to find a layout that defeats it, then work out what
+                    a solver would have to remember. The <strong>Beginner Guide</strong>
+                    tab covers exactly where it breaks.</p>
                 `,
                 final: true,
             },
@@ -290,17 +274,17 @@ const tutorialDefinitions = {
                 target: "#mazeCanvas",
                 title: "Maze objective",
                 body: `
-                    <p>Move the blue triangle from the top-left starting square to
-                    the green goal square. It starts facing right, and every run
-                    resets its position.</p>
+                    <p>Move the blue triangle from the top-left start to the green
+                    goal square. It starts facing right, and every run resets its
+                    position.</p>
                 `,
             },
             {
                 target: "#code",
                 title: "Write code here",
                 body: `
-                    <p>The Python Code box is where you write or paste your program.
-                    The line numbers help you match errors to the relevant line.</p>
+                    <p>Write or paste your Python here. The line numbers help you
+                    match an error to a line.</p>
                     <ul>
                         <li>Act: <code>move()</code>, <code>turn_left()</code>,
                         <code>turn_right()</code></li>
@@ -309,8 +293,8 @@ const tutorialDefinitions = {
                         <code>path_right()</code></li>
                         <li>Finish condition: <code>at_goal()</code></li>
                     </ul>
-                    <p><strong>Load sample</strong>, below the editor, replaces its
-                    contents with a complete example solver.</p>
+                    <p><strong>Load sample</strong>, below the editor, replaces the
+                    contents with a complete solver.</p>
                 `,
             },
             {
@@ -318,20 +302,20 @@ const tutorialDefinitions = {
                 title: "Run, reset and adjust speed",
                 body: `
                     <p><strong>Run program</strong> resets the triangle to the start,
-                    then executes the entire code box.</p>
-                    <p><strong>Reset position</strong> stops the current animation.
-                    The <strong>Speed</strong> slider controls only the animation rate.</p>
+                    then runs the whole code box. <strong>Reset position</strong> stops
+                    the current animation.</p>
+                    <p>The <strong>Speed</strong> slider controls only the animation
+                    rate.</p>
                 `,
             },
             {
                 target: "#output",
                 title: "Check output and errors",
                 body: `
-                    <p>The Output box is read-only. It shows text produced by
-                    <code>print()</code>, whether the goal was reached, and any Python
-                    errors.</p>
+                    <p>The Output box is read-only. It shows <code>print()</code>
+                    text, whether the goal was reached, and any Python error.</p>
                     <p>If a run fails, read the final line here before changing the
-                    code and trying again.</p>
+                    code.</p>
                 `,
             },
             {
@@ -341,8 +325,7 @@ const tutorialDefinitions = {
                     <p><strong>Maze API &amp; Help</strong> is the concise function and
                     error reference. <strong>Beginner Guide</strong> builds a solver
                     step by step.</p>
-                    <p>The panel scrolls, so the rest of each guide remains available
-                    while you work.</p>
+                    <p>The panel scrolls, so both stay available while you work.</p>
                 `,
             },
             {
@@ -387,6 +370,7 @@ let tutorialIsOpen = false;
 let tutorialIsMinimized = false;
 let highlightedElement = null;
 let resumeAfterSelector = false;
+let closeConfirmPending = false;
 
 function countActions(result, actionType) {
     return result.actions.filter(action => action === actionType).length;
@@ -531,6 +515,7 @@ function renderStep() {
     if (!tutorial || !step) return;
 
     hideCoachmark();
+    resetCloseConfirmation();
 
     stepCount.textContent = `${tutorial.label} · ${currentStepIndex + 1} of ${tutorial.steps.length}`;
     stepTitle.textContent = step.title;
@@ -539,6 +524,15 @@ function renderStep() {
 
     insertCodeButton.hidden = !step.code;
     insertCodeButton.textContent = "Replace editor with example";
+
+    // Some steps put their example into the editor for the learner, so that the
+    // very first thing they do is run a working program rather than type one.
+    if (step.code && step.autoInsert) {
+        const editor = document.getElementById("code");
+        editor.value = step.code;
+        editor.dispatchEvent(new Event("input"));
+    }
+
     backButton.disabled = currentStepIndex === 0;
     nextButton.disabled = Boolean(step.requiresRun);
     nextButton.textContent = step.final ? "Finish tutorial" : "Continue";
@@ -665,11 +659,30 @@ nextButton.addEventListener("click", () => {
     renderStep();
 });
 
+/*
+  Closing asks for a second click rather than opening a browser confirm()
+  dialog: the dialog is easy to dismiss by accident, it looks nothing like the
+  rest of the activity, and some browser setups suppress it altogether, which
+  would make the button appear broken.
+*/
+function resetCloseConfirmation() {
+    if (!closeConfirmPending) return;
+    closeConfirmPending = false;
+    closeTutorialButton.textContent = "Close tutorial";
+}
+
 closeTutorialButton.addEventListener("click", () => {
-    const shouldClose = window.confirm(
-        "Close the tutorial guidance? You can restart it below the help tabs.",
-    );
-    if (shouldClose) finishTutorial();
+    if (!closeConfirmPending) {
+        closeConfirmPending = true;
+        closeTutorialButton.textContent = "Yes, close it";
+        setFeedback(
+            "Close the guidance? You can restart it from the toolbar below.",
+        );
+        return;
+    }
+
+    resetCloseConfirmation();
+    finishTutorial();
 });
 
 minimizeTutorialButton.addEventListener("click", () => {

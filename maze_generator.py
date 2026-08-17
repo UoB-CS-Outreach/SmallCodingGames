@@ -1,14 +1,32 @@
 """Generate and validate text mazes for the browser maze game.
 
-The default ``braided`` generator starts with a depth-first-search maze and
-then opens some dead ends to add loops.  ``perfect`` leaves the carved maze as
-a tree, while ``blocks`` deliberately creates a less structured random-block
-test case around a protected start-to-goal route.
+Difficulty is a question of maze structure, not only size. Each level adds one
+new idea that the previous strategy cannot handle:
+
+===========  ==========  ==================================================
+Difficulty   Style       New concept
+===========  ==========  ==================================================
+easy         corridor    One winding route: turns, but no branches and no
+                         dead ends.
+medium       perfect     Junctions and dead ends, still with exactly one
+                         route between any two squares.
+hard         braided     A few loops and wall islands, so a purely local
+                         rule can repeat the same route forever.
+expert       braided     Many loops, islands and open rooms.
+             + rooms
+===========  ==========  ==================================================
+
+The right-hand rule is guaranteed on ``corridor`` and ``perfect`` mazes
+because their passages contain no loops and their walls form a single
+connected shape. It is deliberately *not* guaranteed from ``hard`` onwards.
+
+``blocks`` remains available as an unstructured random-block test case built
+around a protected start-to-goal route.
 
 The module has no browser or third-party dependencies, so it can also be used
 from tests or other tooling::
 
-    maze = generate_maze(21, 31, seed=42, style="braided")
+    maze = generate_difficulty("hard", seed=42)
     print(maze_to_text(maze), end="")
 """
 
@@ -18,7 +36,7 @@ import argparse
 import random
 from collections import deque
 from pathlib import Path
-from typing import Iterable, List, Optional, Sequence, Tuple
+from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
 
 Coordinate = Tuple[int, int]
@@ -31,8 +49,24 @@ START = "S"
 GOAL = "G"
 
 _DIRECTIONS: Tuple[Coordinate, ...] = ((-1, 0), (0, 1), (1, 0), (0, -1))
-_CARVED_STYLES = {"perfect", "braided"}
+_CARVED_STYLES = {"corridor", "perfect", "braided"}
+_LOOP_FREE_STYLES = {"corridor", "perfect"}
 _STYLES = _CARVED_STYLES | {"blocks"}
+
+#: Structure of each difficulty offered by the game. Sizes grow, but the
+#: important change is the topology: see the module docstring.
+DIFFICULTIES: Dict[str, Dict[str, object]] = {
+    "easy": {"rows": 11, "columns": 15, "style": "corridor"},
+    "medium": {"rows": 15, "columns": 19, "style": "perfect"},
+    "hard": {"rows": 19, "columns": 25, "style": "braided", "braid": 0.3},
+    "expert": {
+        "rows": 21,
+        "columns": 29,
+        "style": "braided",
+        "braid": 0.55,
+        "rooms": 3,
+    },
+}
 
 
 def generate_maze(
@@ -42,6 +76,7 @@ def generate_maze(
     seed: Optional[int] = None,
     style: str = "braided",
     braid: float = 0.15,
+    rooms: int = 0,
     block_density: float = 0.32,
 ) -> Maze:
     """Return a new solvable maze as a list of equal-length strings.
@@ -50,9 +85,11 @@ def generate_maze(
         rows: Total number of rows, including the solid outer border.
         columns: Total number of columns, including the outer border.
         seed: Optional seed for reproducible output.
-        style: ``perfect``, ``braided``, or ``blocks``.
+        style: ``corridor``, ``perfect``, ``braided``, or ``blocks``.
         braid: For ``braided``, the probability of opening each dead end into
             another corridor. Higher values create more loops and wall islands.
+        rooms: For ``braided``, the number of open rectangular areas to carve
+            out after braiding.
         block_density: For ``blocks``, the probability that an unprotected
             interior cell is a wall.
 
@@ -60,36 +97,75 @@ def generate_maze(
     with one-cell walls. Random-block mazes accept odd or even dimensions.
     Every style guarantees at least one route from ``S`` to ``G``.
     """
-    _validate_options(rows, columns, style, braid, block_density)
+    _validate_options(rows, columns, style, braid, rooms, block_density)
     rng = random.Random(seed)
 
     if style == "blocks":
         grid = _generate_blocks(rows, columns, rng, block_density)
         start, goal = (1, 1), (rows - 2, columns - 2)
+    elif style == "corridor":
+        grid, start, goal = _carve_corridor(rows, columns, rng)
     else:
         grid = _carve_depth_first(rows, columns, rng)
         if style == "braided":
             _braid_dead_ends(grid, rng, braid)
+            _carve_rooms(grid, rng, rooms)
         start, goal = _distant_endpoints(grid)
 
     grid[start[0]][start[1]] = START
     grid[goal[0]][goal[1]] = GOAL
     maze = ["".join(row) for row in grid]
 
-    # This is intentionally kept as a final invariant check. If a future
-    # generation strategy breaks solvability, it should fail here rather than
-    # emit a bad map.
-    validate_maze(maze)
+    # These are intentionally kept as final invariant checks. If a future
+    # generation strategy breaks solvability, or quietly makes an easier
+    # difficulty harder than the taught strategy can handle, it should fail
+    # here rather than emit a bad map.
+    validate_maze(maze, require_all_passages_connected=style in _CARVED_STYLES)
+    loops = count_passage_loops(maze)
+    if style in _LOOP_FREE_STYLES and loops != 0:
+        raise ValueError(f"{style} mazes must not contain passage loops")
+    if style == "corridor" and count_junctions(maze) != 0:
+        raise ValueError("corridor mazes must not contain junctions")
+    if style == "braided" and braid > 0 and loops == 0:
+        raise ValueError("braided mazes must contain at least one loop")
     return maze
+
+
+def generate_difficulty(name: str, *, seed: Optional[int] = None) -> Maze:
+    """Return a new maze built to the structure of a named difficulty.
+
+    ``name`` is one of the keys of :data:`DIFFICULTIES`. This is the entry
+    point the game uses, so every difficulty is described in one place.
+    """
+    preset = DIFFICULTIES.get(name)
+    if preset is None:
+        choices = ", ".join(DIFFICULTIES)
+        raise ValueError(f"Unknown difficulty {name!r}; choose from {choices}")
+
+    options = dict(preset)
+    return generate_maze(
+        int(options.pop("rows")),
+        int(options.pop("columns")),
+        seed=seed,
+        **options,  # type: ignore[arg-type]
+    )
 
 
 def find_solution(maze: Sequence[str]) -> Optional[List[Coordinate]]:
     """Return a shortest ``S``-to-``G`` path, or ``None`` if no route exists."""
-    rows, columns = _maze_shape(maze)
+    _maze_shape(maze)
     start = _find_unique_marker(maze, START)
     goal = _find_unique_marker(maze, GOAL)
+    return _breadth_first_path(maze, start, goal)
+
+
+def _breadth_first_path(
+    cells: Sequence[Sequence[str]], start: Coordinate, goal: Coordinate
+) -> Optional[List[Coordinate]]:
+    """Return a shortest route between two open squares of a grid or maze."""
+    rows, columns = len(cells), len(cells[0])
     queue = deque([start])
-    previous = {start: None}
+    previous: dict = {start: None}
 
     while queue:
         current = queue.popleft()
@@ -104,7 +180,7 @@ def find_solution(maze: Sequence[str]) -> Optional[List[Coordinate]]:
 
         for neighbour in _neighbours(current, rows, columns):
             row, column = neighbour
-            if maze[row][column] != WALL and neighbour not in previous:
+            if cells[row][column] != WALL and neighbour not in previous:
                 previous[neighbour] = current
                 queue.append(neighbour)
 
@@ -133,14 +209,41 @@ def validate_maze(
 
     if require_all_passages_connected:
         reachable = _reachable_cells(maze, start, rows, columns)
-        passages = {
-            (row, column)
-            for row, line in enumerate(maze)
-            for column, character in enumerate(line)
-            if character != WALL
-        }
-        if reachable != passages:
+        if reachable != _passage_cells(maze):
             raise ValueError("Maze contains disconnected traversable cells")
+
+
+def count_passage_loops(maze: Sequence[str]) -> int:
+    """Return how many independent loops the open squares contain.
+
+    Zero means the open squares form a tree: exactly one route between any two
+    of them. That is the property the taught wall-following strategy relies on,
+    so it holds for the easy and medium mazes and not for harder ones.
+    """
+    rows, columns = _maze_shape(maze)
+    passages = _passage_cells(maze)
+    edges = sum(
+        (row + row_delta, column + column_delta) in passages
+        for row, column in passages
+        for row_delta, column_delta in ((0, 1), (1, 0))
+    )
+    components = _count_components(maze, passages, rows, columns)
+    return edges - len(passages) + components
+
+
+def count_junctions(maze: Sequence[str]) -> int:
+    """Return how many open squares have three or more open neighbours.
+
+    A maze with no junctions is a single corridor, so a program only has to
+    keep following it rather than choose between branches.
+    """
+    rows, columns = _maze_shape(maze)
+    passages = _passage_cells(maze)
+    return sum(
+        sum(neighbour in passages for neighbour in _neighbours(cell, rows, columns))
+        >= 3
+        for cell in passages
+    )
 
 
 def maze_to_text(maze: Sequence[str]) -> str:
@@ -157,7 +260,12 @@ def write_maze(maze: Sequence[str], output: Path) -> None:
 
 
 def _validate_options(
-    rows: int, columns: int, style: str, braid: float, block_density: float
+    rows: int,
+    columns: int,
+    style: str,
+    braid: float,
+    rooms: int,
+    block_density: float,
 ) -> None:
     if rows < 5 or columns < 5:
         raise ValueError("Maze dimensions must both be at least 5")
@@ -165,9 +273,13 @@ def _validate_options(
         choices = ", ".join(sorted(_STYLES))
         raise ValueError(f"Unknown style {style!r}; choose from {choices}")
     if style in _CARVED_STYLES and (rows % 2 == 0 or columns % 2 == 0):
-        raise ValueError("Perfect and braided mazes require odd dimensions")
+        raise ValueError("Carved mazes require odd dimensions")
     if not 0.0 <= braid <= 1.0:
         raise ValueError("braid must be between 0 and 1")
+    if rooms < 0:
+        raise ValueError("rooms cannot be negative")
+    if rooms and style != "braided":
+        raise ValueError("Only braided mazes can contain open rooms")
     if not 0.0 <= block_density <= 1.0:
         raise ValueError("block_density must be between 0 and 1")
 
@@ -203,7 +315,53 @@ def _carve_depth_first(rows: int, columns: int, rng: random.Random) -> Grid:
     return grid
 
 
+def _carve_corridor(
+    rows: int, columns: int, rng: random.Random
+) -> Tuple[Grid, Coordinate, Coordinate]:
+    """Carve a maze, then keep only its longest route.
+
+    A perfect maze has exactly one route between any two squares, so the route
+    between its two most distant squares is a single winding corridor: it has
+    turns, but no branches and no dead ends.
+    """
+    carved = _carve_depth_first(rows, columns, rng)
+    start, goal = _distant_endpoints(carved)
+    route = _breadth_first_path(carved, start, goal)
+    if route is None:  # pragma: no cover - a carved maze is always connected
+        raise ValueError("Carved maze has no route between its endpoints")
+
+    grid = [[WALL for _ in range(columns)] for _ in range(rows)]
+    for row, column in route:
+        grid[row][column] = PASSAGE
+
+    return grid, start, goal
+
+
+def _carve_rooms(grid: Grid, rng: random.Random, count: int) -> None:
+    """Open ``count`` rectangular areas, creating open space and wall islands."""
+    rows, columns = len(grid), len(grid[0])
+
+    for _ in range(count):
+        height = rng.choice((3, 5))
+        width = rng.choice((3, 5))
+        if rows - height <= 1 or columns - width <= 1:
+            continue
+
+        top = rng.randrange(1, rows - height, 2)
+        left = rng.randrange(1, columns - width, 2)
+        for row in range(top, top + height):
+            for column in range(left, left + width):
+                grid[row][column] = PASSAGE
+
+
 def _braid_dead_ends(grid: Grid, rng: random.Random, probability: float) -> None:
+    """Open dead ends into neighbouring corridors, creating loops.
+
+    Every wall removed here joins two squares that were already connected, so
+    it adds exactly one loop. When ``probability`` is greater than zero the
+    random pass is topped up if needed, so a braided maze always contains at
+    least one loop rather than occasionally staying a perfect maze.
+    """
     if probability == 0:
         return
 
@@ -215,8 +373,26 @@ def _braid_dead_ends(grid: Grid, rng: random.Random, probability: float) -> None
     ]
     rng.shuffle(cells)
 
+    opened = _open_dead_ends(grid, cells, rng, probability)
+    if opened == 0:
+        _open_dead_ends(grid, cells, rng, 1.0, limit=1)
+
+
+def _open_dead_ends(
+    grid: Grid,
+    cells: Sequence[Coordinate],
+    rng: random.Random,
+    probability: float,
+    limit: Optional[int] = None,
+) -> int:
+    """Open up to ``limit`` dead ends and return how many were opened."""
+    rows, columns = len(grid), len(grid[0])
+    opened = 0
+
     for row, column in cells:
-        if rng.random() > probability:
+        if limit is not None and opened >= limit:
+            break
+        if probability < 1.0 and rng.random() > probability:
             continue
         if _open_neighbour_count(grid, row, column) != 1:
             continue
@@ -236,6 +412,9 @@ def _braid_dead_ends(grid: Grid, rng: random.Random, probability: float) -> None
         if removable_walls:
             wall_row, wall_column = rng.choice(removable_walls)
             grid[wall_row][wall_column] = PASSAGE
+            opened += 1
+
+    return opened
 
 
 def _generate_blocks(
@@ -330,6 +509,27 @@ def _find_unique_marker(maze: Sequence[str], marker: str) -> Coordinate:
     return matches[0]
 
 
+def _passage_cells(maze: Sequence[str]) -> set[Coordinate]:
+    return {
+        (row, column)
+        for row, line in enumerate(maze)
+        for column, character in enumerate(line)
+        if character != WALL
+    }
+
+
+def _count_components(
+    maze: Sequence[str], passages: set[Coordinate], rows: int, columns: int
+) -> int:
+    unvisited = set(passages)
+    components = 0
+    while unvisited:
+        origin = next(iter(unvisited))
+        unvisited -= _reachable_cells(maze, origin, rows, columns)
+        components += 1
+    return components
+
+
 def _reachable_cells(
     maze: Sequence[str], origin: Coordinate, rows: int, columns: int
 ) -> set[Coordinate]:
@@ -357,6 +557,12 @@ def _neighbours(
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--difficulty",
+        choices=list(DIFFICULTIES),
+        help="build the maze the game uses for this difficulty, which "
+        "overrides --rows, --columns, --style, --braid and --rooms",
+    )
     parser.add_argument("--rows", type=int, default=21, help="maze rows (default: 21)")
     parser.add_argument(
         "--columns", type=int, default=21, help="maze columns (default: 21)"
@@ -370,6 +576,12 @@ def _build_parser() -> argparse.ArgumentParser:
         type=float,
         default=0.15,
         help="chance of opening a dead end in braided mazes (default: 0.15)",
+    )
+    parser.add_argument(
+        "--rooms",
+        type=int,
+        default=0,
+        help="open areas to carve into a braided maze (default: 0)",
     )
     parser.add_argument(
         "--block-density",
@@ -386,14 +598,18 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
     try:
-        maze = generate_maze(
-            args.rows,
-            args.columns,
-            seed=args.seed,
-            style=args.style,
-            braid=args.braid,
-            block_density=args.block_density,
-        )
+        if args.difficulty:
+            maze = generate_difficulty(args.difficulty, seed=args.seed)
+        else:
+            maze = generate_maze(
+                args.rows,
+                args.columns,
+                seed=args.seed,
+                style=args.style,
+                braid=args.braid,
+                rooms=args.rooms,
+                block_density=args.block_density,
+            )
     except ValueError as error:
         parser.error(str(error))
 

@@ -9,51 +9,39 @@ let maze = [];
 let numRows = 0, numCols = 0;
 let startRow = 0, startCol = 0;
 let goalRow = 0, goalCol = 0;
+let shortestRoute = 0;
 
+/*
+  Each level names a checked-in maze plus the difficulty the generator should
+  build when a fresh layout is requested. The structure of each difficulty
+  (size, loops, dead ends, open rooms) lives in maze_generator.py so that the
+  game and the tests agree on what "hard" means.
+*/
 const MAZE_LEVELS = {
     tutorial: {
         label: "Tutorial maze",
         url: "mazes/default.txt",
-        rows: 11,
-        columns: 11,
-        style: "perfect",
+        difficulty: "easy",
     },
     easy: {
         label: "Easy",
         url: "mazes/easy_winding.txt",
-        rows: 11,
-        columns: 15,
-        style: "perfect",
+        difficulty: "easy",
     },
     medium: {
         label: "Medium",
         url: "mazes/medium_crossroads.txt",
-        rows: 15,
-        columns: 19,
-        style: "perfect",
+        difficulty: "medium",
     },
     hard: {
         label: "Hard",
         url: "mazes/hard_switchbacks.txt",
-        rows: 19,
-        columns: 25,
-        style: "perfect",
+        difficulty: "hard",
     },
     expert: {
-        label: "Loops and islands",
+        label: "Expert",
         url: "mazes/expert_archipelago.txt",
-        rows: 21,
-        columns: 29,
-        style: "braided",
-        braid: 0.38,
-    },
-    random: {
-        label: "Random blocks",
-        url: "mazes/blocks_test.txt",
-        rows: 15,
-        columns: 19,
-        style: "blocks",
-        blockDensity: 0.42,
+        difficulty: "expert",
     },
 };
 
@@ -97,11 +85,14 @@ function validateMaze(nextMaze) {
     const [goal] = goals;
     const queue = [start];
     const visited = new Set([start.join(",")]);
+    // Distances double as the shortest possible number of moves, which the
+    // run summary compares the learner's own move count against.
+    const distance = new Map([[start.join(","), 0]]);
 
     for (let index = 0; index < queue.length; index++) {
         const [row, column] = queue[index];
         if (row === goal[0] && column === goal[1]) {
-            return {start, goal};
+            return {start, goal, shortest: distance.get(`${row},${column}`)};
         }
 
         for (const [rowDelta, columnDelta] of [[-1, 0], [0, 1], [1, 0], [0, -1]]) {
@@ -115,6 +106,7 @@ function validateMaze(nextMaze) {
                 !visited.has(key)
             ) {
                 visited.add(key);
+                distance.set(key, distance.get(`${row},${column}`) + 1);
                 queue.push([nextRow, nextColumn]);
             }
         }
@@ -124,12 +116,13 @@ function validateMaze(nextMaze) {
 }
 
 function applyMaze(nextMaze) {
-    const {start, goal} = validateMaze(nextMaze);
+    const {start, goal, shortest} = validateMaze(nextMaze);
     maze = nextMaze;
     numRows = maze.length;
     numCols = maze[0].length;
     [startRow, startCol] = start;
     [goalRow, goalCol] = goal;
+    shortestRoute = shortest;
 
     // Expose maze data to Python.
     globalThis.JS_MAZE = maze;
@@ -168,29 +161,85 @@ const canvas = document.getElementById("mazeCanvas");
 const ctx = canvas.getContext("2d");
 
 /*
-  Resize the canvas to the maze's aspect ratio, then compute the cell size.
-  This keeps the largest dimension at 480px without leaving unused bands
-  above/below or beside rectangular mazes.
+  The maze fills whatever width its panel offers, so a wide screen shows a
+  large maze rather than shrinking the harder, bigger layouts into a corner.
+  A cap stops the small tutorial maze from becoming comically large.
 */
-const MAX_MAZE_CANVAS_SIZE = 480;
+const MAX_CELL_SIZE = 44;
+/* Roughly the height of the panel's heading, controls and status line. */
+const MAZE_PANEL_CHROME_HEIGHT = 300;
+
 let cellSize;
-let offsetX;
-let offsetY;
+let offsetX = 0;
+let offsetY = 0;
+let canvasWidth = 0;
+let canvasHeight = 0;
+
+/* Width the maze may occupy, inside its stage's padding. */
+function availableMazeWidth() {
+    const stage = canvas.parentElement;
+    const styles = getComputedStyle(stage);
+    const padding =
+        parseFloat(styles.paddingLeft) + parseFloat(styles.paddingRight);
+    return Math.max(200, stage.clientWidth - padding);
+}
 
 function updateMazeGeometry() {
-    const scale = Math.min(
-        MAX_MAZE_CANVAS_SIZE / numCols,
-        MAX_MAZE_CANVAS_SIZE / numRows,
+    // Keep the whole maze panel inside the window where possible, so on a
+    // wide screen the maze and the editor can be read side by side.
+    const maxHeight = Math.max(
+        260,
+        Math.min(window.innerHeight - MAZE_PANEL_CHROME_HEIGHT, 780),
+    );
+    cellSize = Math.min(
+        availableMazeWidth() / numCols,
+        maxHeight / numRows,
+        MAX_CELL_SIZE,
     );
 
-    canvas.width = Math.max(1, Math.round(numCols * scale));
-    canvas.height = Math.max(1, Math.round(numRows * scale));
-    cellSize = Math.min(canvas.width / numCols, canvas.height / numRows);
-    offsetX = (canvas.width - numCols * cellSize) / 2;
-    offsetY = (canvas.height - numRows * cellSize) / 2;
+    canvasWidth = numCols * cellSize;
+    canvasHeight = numRows * cellSize;
+
+    // Draw at device resolution so the grid lines stay crisp, then work in
+    // CSS pixels everywhere else. Resizing a canvas resets its context, so
+    // the scale transform has to be reapplied here.
+    const pixelRatio = window.devicePixelRatio || 1;
+    canvas.style.width = `${canvasWidth}px`;
+    canvas.style.height = `${canvasHeight}px`;
+    canvas.width = Math.max(1, Math.round(canvasWidth * pixelRatio));
+    canvas.height = Math.max(1, Math.round(canvasHeight * pixelRatio));
+    ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
 }
 
 updateMazeGeometry();
+
+/* Follow panel resizes, including the switch between one and two columns. */
+let lastMazeWidth = Math.round(availableMazeWidth());
+
+function refitMaze() {
+    updateMazeGeometry();
+    if (visRow !== undefined) drawMaze();
+}
+
+if (typeof ResizeObserver === "function") {
+    new ResizeObserver(() => {
+        const width = Math.round(availableMazeWidth());
+        if (width === lastMazeWidth) return;
+        lastMazeWidth = width;
+        refitMaze();
+    }).observe(canvas.parentElement);
+}
+
+// The window's height also limits the maze, and it can change without the
+// panel's width changing at all. This also covers browsers where the
+// observer above is unavailable, since the panel only reflows with the
+// window in practice.
+window.addEventListener("resize", refitMaze);
+
+// Fonts and the panel's own borders can settle after this module first runs,
+// so measure once more when the page has finished loading.
+window.addEventListener("load", refitMaze);
+requestAnimationFrame(refitMaze);
 
 /*
   Visual state of the player. This is separate from the logical
@@ -239,7 +288,11 @@ function drawPlayer(row, col, dir) {
 
 /* Draw the full maze plus current player position. */
 function drawMaze() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+    // Grid lines help pupils count squares, but on the biggest mazes they
+    // crowd the passages, so they are dropped once cells get small.
+    const showGrid = cellSize >= 11;
 
     for (let r = 0; r < numRows; r++) {
         for (let c = 0; c < numCols; c++) {
@@ -247,22 +300,47 @@ function drawMaze() {
             const x = offsetX + c * cellSize;
             const y = offsetY + r * cellSize;
 
-            ctx.fillStyle = (ch === "#") ? "#333333" : "#ffffff";
+            ctx.fillStyle = (ch === "#") ? "#243b57" : "#ffffff";
             ctx.fillRect(x, y, cellSize, cellSize);
 
             // Highlight the goal cell
             if (r === goalRow && c === goalCol) {
-                ctx.fillStyle = "#b2f2b2";
+                ctx.fillStyle = goalPulseOn ? "#33d6a6" : "#b6f0da";
                 ctx.fillRect(x, y, cellSize, cellSize);
             }
 
-            // Light grid lines
-            ctx.strokeStyle = "#aaaaaa";
-            ctx.strokeRect(x, y, cellSize, cellSize);
+            if (showGrid && ch !== "#") {
+                ctx.strokeStyle = "#e4eaf1";
+                ctx.strokeRect(x, y, cellSize, cellSize);
+            }
         }
     }
 
     drawPlayer(visRow, visCol, visDir);
+}
+
+/*
+  Flash the goal a few times when the maze is solved. Reaching the goal is
+  the whole point of the activity, so it should be visibly rewarded rather
+  than only reported as a line of text.
+*/
+let goalPulseOn = false;
+
+async function celebrateGoal(runId) {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    for (let pulse = 0; pulse < 3; pulse++) {
+        if (runId !== runCounter) break;
+        goalPulseOn = true;
+        drawMaze();
+        await sleep(150);
+        goalPulseOn = false;
+        drawMaze();
+        await sleep(130);
+    }
+
+    goalPulseOn = false;
+    if (runId === runCounter) drawMaze();
 }
 
 /* Reset just the JS visual state, not the Python logic. */
@@ -300,11 +378,22 @@ function stepForward(row, col, dir) {
 */
 async function playActions(runId) {
     const speedInput = document.getElementById("speed");
+    const actionCount = actionQueue.length;
     drawMaze();
 
-    for (const action of actionQueue) {
+    // A solver stuck in a loop can queue thousands of actions. Played at the
+    // normal pace that is minutes of watching, so long runs are drawn in
+    // batches and hurried along.
+    const framesToDraw = Math.min(actionCount, MAX_ANIMATION_FRAMES);
+    const drawEvery = Math.max(1, Math.ceil(actionCount / framesToDraw));
+    if (drawEvery > 1) {
+        setMazeStatus(`${actionCount} steps — animation sped up.`);
+    }
+
+    for (let index = 0; index < actionCount; index++) {
         if (runId !== runCounter) return; // cancelled
 
+        const action = actionQueue[index];
         if (action.type === "move") {
             [visRow, visCol] = stepForward(visRow, visCol, visDir);
         } else if (action.type === "turnLeft") {
@@ -313,9 +402,11 @@ async function playActions(runId) {
             visDir = (visDir + 1) % 4;
         }
 
-        drawMaze();
-        const delay = getActionDelay(speedInput, actionQueue.length);
-        await sleep(delay);
+        const isLastAction = index === actionCount - 1;
+        if (index % drawEvery === 0 || isLastAction) {
+            drawMaze();
+            await sleep(getActionDelay(speedInput, actionCount) * drawEvery);
+        }
     }
 }
 
@@ -327,11 +418,19 @@ let tutorialAnimationActive = false;
 const TUTORIAL_TARGET_ACTION_DELAY_MS = 1000;
 const TUTORIAL_EXTRA_DELAY_BUDGET_MS = 10000;
 
+/* Longest a whole animation should take, and how many frames it may draw. */
+const MAX_ANIMATION_MS = 10000;
+const MAX_ANIMATION_FRAMES = 500;
+
 function getActionDelay(speedInput, actionCount) {
     const raw = parseInt(speedInput.value, 10);
     const min = parseInt(speedInput.min, 10);
     const max = parseInt(speedInput.max, 10);
-    const normalDelay = (max + min) - raw;
+    const chosenDelay = (max + min) - raw;
+    const normalDelay = Math.min(
+        chosenDelay,
+        MAX_ANIMATION_MS / Math.max(1, actionCount),
+    );
 
     if (!tutorialAnimationActive) return normalDelay;
 
@@ -407,6 +506,7 @@ exec(
 `);
 
     pythonReady = true;
+    document.getElementById("runBtn").textContent = "Run program";
     setMazeChangeInProgress(false);
     setMazeStatus("Tutorial maze loaded.");
     document.dispatchEvent(new CustomEvent("maze:ready"));
@@ -516,23 +616,10 @@ async function generateNewMaze(level = currentMazeLevel) {
         await pyodideReadyPromise;
         if (changeId !== mazeChangeCounter) return;
 
-        pyodide.globals.set("PMG_GENERATED_ROWS", config.rows);
-        pyodide.globals.set("PMG_GENERATED_COLUMNS", config.columns);
-        pyodide.globals.set("PMG_GENERATED_STYLE", config.style);
-        pyodide.globals.set("PMG_GENERATED_BRAID", config.braid ?? 0.15);
-        pyodide.globals.set(
-            "PMG_GENERATED_BLOCK_DENSITY",
-            config.blockDensity ?? 0.32,
-        );
+        pyodide.globals.set("PMG_GENERATED_DIFFICULTY", config.difficulty);
         const generatedText = await pyodide.runPythonAsync(`
 PMG_MAZE_GENERATOR.maze_to_text(
-    PMG_MAZE_GENERATOR.generate_maze(
-        PMG_GENERATED_ROWS,
-        PMG_GENERATED_COLUMNS,
-        style=PMG_GENERATED_STYLE,
-        braid=PMG_GENERATED_BRAID,
-        block_density=PMG_GENERATED_BLOCK_DENSITY,
-    )
+    PMG_MAZE_GENERATOR.generate_difficulty(PMG_GENERATED_DIFFICULTY)
 )
 `);
         if (changeId !== mazeChangeCounter) return;
@@ -581,9 +668,12 @@ async function runProgram() {
 
     // Run the user's Python program
     try {
+        // Budget for a generous but finite program. A looping wall follower
+        // reaches this in a couple of seconds, which keeps the wait before a
+        // StepLimitError short enough to stay interesting.
         pyodide.globals.set("PMG_SRC", code);
         pyodide.globals.set("PMG_MAX_SECONDS", 5);
-        pyodide.globals.set("PMG_MAX_STEPS", 50000);
+        pyodide.globals.set("PMG_MAX_STEPS", 25000);
 
         await pyodide.runPythonAsync("run_user_code(PMG_SRC, PMG_MAX_SECONDS, PMG_MAX_STEPS)");
     } catch (err) {
@@ -609,11 +699,17 @@ async function runProgram() {
     }
 
     if (reached) {
-        appendOutput("Reached goal!");
+        const moves = actionTypes.filter(type => type === "move").length;
+        appendOutput(
+            `Reached the goal in ${moves} moves. ` +
+            `The shortest route is ${shortestRoute}.`,
+        );
+        setMazeStatus(`Solved in ${moves} moves (shortest route ${shortestRoute}).`);
     } else if (!hadError) {
         appendOutput("Program finished without reaching goal.");
     }
 
+    // Reported before the celebration so the tutorial unlocks immediately.
     document.dispatchEvent(new CustomEvent("maze:run-complete", {
         detail: {
             runId: thisRun,
@@ -622,6 +718,8 @@ async function runProgram() {
             actions: actionTypes
         }
     }));
+
+    if (reached) await celebrateGoal(thisRun);
 }
 
 function formatPyodideError(err) {
@@ -667,19 +765,26 @@ document.getElementById("resetBtn").addEventListener("click", () => {
     pyodideReadyPromise.then(() => pyodide.runPythonAsync("reset_state()"));
 });
 
-// Sample button restores the sample code
+/*
+  Sample button loads the worked solver. Replacing work in progress needs a
+  confirmation, but an empty or untouched editor does not, and a browser
+  confirm() dialog in the middle of a short activity is worth avoiding.
+*/
 document.getElementById("sampleBtn").addEventListener("click", async () => {
-  const code = document.getElementById("code");
+    const code = document.getElementById("code");
+    const written = code.value.trim();
+    const untouched = written === "" || written === "# Enter your python code here";
 
-  const ok = window.confirm(
-    "Load sample code?\n\nThis will overwrite the current contents of the code box."
-  );
-  if (!ok) return;
+    if (!untouched && !window.confirm(
+        "Replace your code with the sample solver?"
+    )) {
+        return;
+    }
 
-  const txt = await fetch("samples/default.txt");
-  code.value = await txt.text();
-  code.dispatchEvent(new Event("input")); // refresh line numbers
-  code.focus();
+    const response = await fetch("samples/default.txt");
+    code.value = await response.text();
+    code.dispatchEvent(new Event("input")); // refresh line numbers
+    code.focus();
 });
 
 document.getElementById("mazeSelect").addEventListener("change", event => {
@@ -709,9 +814,44 @@ document.addEventListener("tutorial:complete", async () => {
     if (currentMazeLevel === "tutorial") showMazeChoicePrompt();
 });
 
+/*
+  Small bridge for other scripts on the page (this file is a module, so
+  pyodide itself is not global). Anything that needs to run Python or swap the
+  displayed maze should go through here rather than reaching into maze.js.
+*/
 globalThis.mazeGame = {
     loadPreset: loadPresetMaze,
     generate: generateNewMaze,
+
+    /* Resolves once Pyodide, maze.py and the generator are all loaded. */
+    ready: () => pyodideReadyPromise,
+
+    /* Run a snippet of Python and return its value. */
+    runPython: async source => {
+        await pyodideReadyPromise;
+        return pyodide.runPythonAsync(source);
+    },
+
+    /* Set a Python global, for passing values in before runPython(). */
+    setGlobal: async (name, value) => {
+        await pyodideReadyPromise;
+        pyodide.globals.set(name, value);
+    },
+
+    /* Display an arbitrary maze, e.g. one that a challenge run failed on. */
+    loadMazeText: async (text, level, description) => {
+        await pyodideReadyPromise;
+        await activateMaze(parseMazeText(String(text)), level, description);
+    },
+
+    /* Disable the run and maze controls while a long task is in progress. */
+    setBusy: inProgress => setMazeChangeInProgress(inProgress),
+
+    /* The current contents of the Python editor. */
+    getCode: () => document.getElementById("code").value,
+
+    /* Status line under the maze controls. */
+    setStatus: (message, isError = false) => setMazeStatus(message, isError),
 };
 
 // Initial draw when the page loads
