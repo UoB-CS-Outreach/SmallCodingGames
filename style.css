@@ -173,14 +173,15 @@ h2 {
   Wide screens get the maze beside the editor so the triangle stays in view
   while code is being typed. Below that everything stacks in reading order.
 */
+/*
+  The maze deliberately does NOT use position: sticky. Sticky positioning
+  always creates a stacking context, which would trap the tutorial's
+  spotlight (z-index 901) inside this panel and paint it underneath the
+  tutorial backdrop, leaving the highlighted control dimmed and unclickable.
+*/
 @media (min-width: 1180px) {
     .lab-grid {
         grid-template-columns: minmax(430px, 1fr) minmax(470px, 1fr);
-    }
-
-    .maze-panel {
-        position: sticky;
-        top: 18px;
     }
 
     .help-panel {
@@ -595,7 +596,7 @@ textarea {
 .tutorial-selector button,
 .tutorial-coachmark button {
     min-height: 40px;
-    padding: 8px 13px;
+    padding: 8px 12px;
     border: 1px solid #cad5e1;
     border-radius: 10px;
     background: #ffffff;
@@ -710,7 +711,7 @@ textarea {
 .tutorial-coachmark {
     position: fixed;
     z-index: 902;
-    width: min(400px, calc(100vw - 24px));
+    width: min(430px, calc(100vw - 24px));
     padding: 18px;
     border: 0;
     border-radius: 14px;
@@ -780,8 +781,14 @@ textarea {
     margin-top: 12px;
 }
 
+/*
+  The labels change while the tutorial runs ("Close tutorial" becomes "Yes,
+  close it"), so this row has to wrap rather than push a button out past the
+  edge of the card.
+*/
 .tutorial-navigation {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 8px;
     margin-top: 16px;
@@ -789,8 +796,14 @@ textarea {
     border-top: 1px solid var(--line);
 }
 
+.tutorial-navigation button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+
 .tutorial-navigation-spacer {
-    flex: 1;
+    flex: 1 1 0;
+    min-width: 0;
 }
 
 #tutorialNextBtn {

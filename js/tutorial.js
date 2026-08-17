@@ -438,43 +438,55 @@ function positionCoachmark() {
     }
 
     const margin = 14;
-    const targetRect = highlightedElement.getBoundingClientRect();
-    const cardRect = coachmark.getBoundingClientRect();
-    const availableBelow = window.innerHeight - targetRect.bottom;
-    const availableRight = window.innerWidth - targetRect.right;
+    const target = highlightedElement.getBoundingClientRect();
+    const card = coachmark.getBoundingClientRect();
+    const centredX = target.left + (target.width - card.width) / 2;
+    const centredY = target.top + (target.height - card.height) / 2;
 
-    let top;
-    let left;
-    if (availableBelow >= cardRect.height + margin) {
-        top = targetRect.bottom + margin;
-        left = targetRect.left + (targetRect.width - cardRect.width) / 2;
-    } else if (targetRect.top >= cardRect.height + margin) {
-        top = targetRect.top - cardRect.height - margin;
-        left = targetRect.left + (targetRect.width - cardRect.width) / 2;
-    } else if (availableRight >= cardRect.width + margin) {
-        top = targetRect.top + (targetRect.height - cardRect.height) / 2;
-        left = targetRect.right + margin;
-    } else if (targetRect.left >= cardRect.width + margin) {
-        top = targetRect.top + (targetRect.height - cardRect.height) / 2;
-        left = targetRect.left - cardRect.width - margin;
-    } else {
-        top = availableBelow >= targetRect.top
-            ? targetRect.bottom + margin
-            : targetRect.top - cardRect.height - margin;
-        left = targetRect.left + (targetRect.width - cardRect.width) / 2;
-    }
+    /* Below, above, right, left: where the card would go and the room there. */
+    const placements = [
+        {
+            top: target.bottom + margin,
+            left: centredX,
+            room: window.innerHeight - target.bottom,
+            needed: card.height + margin,
+        },
+        {
+            top: target.top - card.height - margin,
+            left: centredX,
+            room: target.top,
+            needed: card.height + margin,
+        },
+        {
+            top: centredY,
+            left: target.right + margin,
+            room: window.innerWidth - target.right,
+            needed: card.width + margin,
+        },
+        {
+            top: centredY,
+            left: target.left - card.width - margin,
+            room: target.left,
+            needed: card.width + margin,
+        },
+    ];
 
-    top = Math.max(
-        margin,
-        Math.min(top, window.innerHeight - cardRect.height - margin),
-    );
-    left = Math.max(
-        margin,
-        Math.min(left, window.innerWidth - cardRect.width - margin),
-    );
+    // Prefer the first side the card fits on; otherwise take whichever side
+    // is least cramped, so the card is never dropped straight on top of the
+    // control it is pointing at.
+    const choice =
+        placements.find(placement => placement.room >= placement.needed) ||
+        placements.reduce((best, placement) =>
+            placement.room - placement.needed > best.room - best.needed
+                ? placement
+                : best,
+        );
 
-    coachmark.style.top = `${top}px`;
-    coachmark.style.left = `${left}px`;
+    const clamp = (value, limit) => Math.max(margin, Math.min(value, limit));
+    coachmark.style.top =
+        `${clamp(choice.top, window.innerHeight - card.height - margin)}px`;
+    coachmark.style.left =
+        `${clamp(choice.left, window.innerWidth - card.width - margin)}px`;
 }
 
 function showCoachmark() {
@@ -503,10 +515,22 @@ function showCoachmark() {
 
     window.addEventListener("resize", positionCoachmark);
     window.addEventListener("scroll", positionCoachmark, true);
-    requestAnimationFrame(() => {
-        positionCoachmark();
-        coachmark.focus({preventScroll: true});
-    });
+    /*
+      Position immediately, then again once scrolling and layout have settled:
+      scrollIntoView() above may still be moving the page, and the card's
+      height depends on this step's content. Measuring only once leaves the
+      card on stale geometry, which is how it ends up sitting on top of the
+      control it is pointing at.
+
+      Deliberately not driven by requestAnimationFrame alone: a browser does
+      not run animation frames for a page in a background tab, so a learner
+      who switches tabs mid-tutorial would come back to a card that never
+      moved again.
+    */
+    positionCoachmark();
+    coachmark.focus({preventScroll: true});
+    setTimeout(positionCoachmark, 0);
+    setTimeout(positionCoachmark, 160);
 }
 
 function renderStep() {

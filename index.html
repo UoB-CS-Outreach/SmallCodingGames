@@ -625,14 +625,14 @@ def forward():
   JavaScript code for the maze app. Handles running the user's Python code
   in Pyodide, updating the maze canvas, and swapping between instruction tabs.
 -->
-<script type="module" src="maze.js"></script>
-<script src="tutorial.js"></script>
+<script type="module" src="js/maze.js"></script>
+<script src="js/tutorial.js"></script>
 
 <!--
   Challenge mode runs the editor's program against many generated mazes.
   It builds its own markup and talks to the game through globalThis.mazeGame.
 -->
-<script defer src="challenge.js"></script>
+<script defer src="js/challenge.js"></script>
 
 </body>
 </html>
