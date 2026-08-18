@@ -391,32 +391,32 @@ async function playActions(runId) {
     const actionCount = actionQueue.length;
     drawMaze();
 
-    // A solver stuck in a loop can queue thousands of actions. Played at the
-    // normal pace that is minutes of watching, so long runs are drawn in
-    // batches and hurried along.
-    const framesToDraw = Math.min(actionCount, MAX_ANIMATION_FRAMES);
-    const drawEvery = Math.max(1, Math.ceil(actionCount / framesToDraw));
-    if (drawEvery > 1) {
-        setMazeStatus(`${actionCount} steps — animation sped up.`);
-    }
-
-    for (let index = 0; index < actionCount; index++) {
+    let index = 0;
+    while (index < actionCount) {
         if (runId !== runCounter) return; // cancelled
 
-        const action = actionQueue[index];
-        if (action.type === "move") {
-            [visRow, visCol] = stepForward(visRow, visCol, visDir);
-        } else if (action.type === "turnLeft") {
-            visDir = (visDir + 3) % 4;
-        } else if (action.type === "turnRight") {
-            visDir = (visDir + 1) % 4;
+        // Re-read the slider every frame, so dragging it changes the pace of
+        // a run already in progress rather than only the next one.
+        const rate = actionsPerSecond(speedInput, actionCount);
+        const actionsThisFrame = Math.max(
+            1,
+            Math.round(rate / MAX_FRAMES_PER_SECOND),
+        );
+
+        for (let step = 0; step < actionsThisFrame && index < actionCount; step++) {
+            const action = actionQueue[index];
+            if (action.type === "move") {
+                [visRow, visCol] = stepForward(visRow, visCol, visDir);
+            } else if (action.type === "turnLeft") {
+                visDir = (visDir + 3) % 4;
+            } else if (action.type === "turnRight") {
+                visDir = (visDir + 1) % 4;
+            }
+            index++;
         }
 
-        const isLastAction = index === actionCount - 1;
-        if (index % drawEvery === 0 || isLastAction) {
-            drawMaze();
-            await sleep(getActionDelay(speedInput, actionCount) * drawEvery);
-        }
+        drawMaze();
+        await sleep((1000 * actionsThisFrame) / rate);
     }
 }
 
@@ -425,36 +425,36 @@ let pythonReady = false;
 let runCounter = 0;
 let tutorialAnimationActive = false;
 
-const TUTORIAL_TARGET_ACTION_DELAY_MS = 1000;
-const TUTORIAL_EXTRA_DELAY_BUDGET_MS = 10000;
+/*
+  The speed slider sets a pace in actions per second rather than a delay per
+  action, so it stays meaningful whether a program makes five moves or five
+  thousand. The scale is geometric: the slow end has fine control for watching
+  a single decision, and the fast end is quick enough to sit through a solver
+  circling a loop 2,000 times.
+*/
+const SLOWEST_ACTIONS_PER_SECOND = 2;
+const FASTEST_ACTIONS_PER_SECOND = 800;
 
-/* Longest a whole animation should take, and how many frames it may draw. */
-const MAX_ANIMATION_MS = 10000;
-const MAX_ANIMATION_FRAMES = 500;
+/* Beyond this, several actions are applied per drawn frame instead. */
+const MAX_FRAMES_PER_SECOND = 60;
 
-function getActionDelay(speedInput, actionCount) {
+/* A tutorial example is a few moves long and is meant to be followed. */
+const TUTORIAL_ACTIONS_PER_SECOND = 1.5;
+const TUTORIAL_SHORT_RUN = 40;
+
+function actionsPerSecond(speedInput, actionCount) {
     const raw = parseInt(speedInput.value, 10);
     const min = parseInt(speedInput.min, 10);
     const max = parseInt(speedInput.max, 10);
-    const chosenDelay = (max + min) - raw;
-    const normalDelay = Math.min(
-        chosenDelay,
-        MAX_ANIMATION_MS / Math.max(1, actionCount),
-    );
+    const fraction = (raw - min) / Math.max(1, max - min);
+    const rate =
+        SLOWEST_ACTIONS_PER_SECOND *
+        (FASTEST_ACTIONS_PER_SECOND / SLOWEST_ACTIONS_PER_SECOND) ** fraction;
 
-    if (!tutorialAnimationActive) return normalDelay;
-
-    // Make short tutorial examples easy to follow. For a long program, divide
-    // a bounded amount of extra time across its actions so the tutorial pace
-    // cannot add more than roughly ten seconds to the complete animation.
-    const actionTotal = Math.max(1, actionCount);
-    const extraDelayBudget = TUTORIAL_EXTRA_DELAY_BUDGET_MS / actionTotal;
-    const extraDelayNeeded = Math.max(
-        0,
-        TUTORIAL_TARGET_ACTION_DELAY_MS - normalDelay,
-    );
-
-    return normalDelay + Math.min(extraDelayNeeded, extraDelayBudget);
+    if (tutorialAnimationActive && actionCount <= TUTORIAL_SHORT_RUN) {
+        return Math.min(rate, TUTORIAL_ACTIONS_PER_SECOND);
+    }
+    return rate;
 }
 
 /*
@@ -518,7 +518,7 @@ exec(
     pythonReady = true;
     document.getElementById("runBtn").textContent = "Run program";
     setMazeChangeInProgress(false);
-    setMazeStatus("Tutorial maze loaded.");
+    setMazeStatus("");
     document.dispatchEvent(new CustomEvent("maze:ready"));
 
     return pyodide;
@@ -533,6 +533,12 @@ pyodideReadyPromise.catch(error => {
 
 let mazeChangeCounter = 0;
 
+/*
+  One short line under the maze controls. It is deliberately quiet: it speaks
+  while something is loading, when something goes wrong, and when a tutorial
+  or challenge needs to say what to do next. Routine successes say nothing,
+  because the maze and the Output panel already show them.
+*/
 function setMazeStatus(message, isError = false) {
     const mazeStatus = document.getElementById("mazeStatus");
     mazeStatus.textContent = message;
@@ -545,10 +551,7 @@ function clearMazeChoicePrompt() {
 
 function showMazeChoicePrompt() {
     document.getElementById("mazeControls").classList.add("maze-controls-prompt");
-    setMazeStatus(
-        "Tutorial complete. The tutorial maze is still loaded. Use the Maze menu " +
-        "to load another type, or generate a fresh layout when you are ready.",
-    );
+    setMazeStatus("Pick a different maze here when you are ready.");
 }
 
 function setMazeControlsEnabled(enabled) {
@@ -563,7 +566,7 @@ function setMazeChangeInProgress(inProgress) {
     document.getElementById("resetBtn").disabled = !controlsEnabled;
 }
 
-async function activateMaze(nextMaze, level, description) {
+async function activateMaze(nextMaze, level) {
     applyMaze(nextMaze);
     currentMazeLevel = level;
     document.getElementById("mazeSelect").value = level;
@@ -574,7 +577,7 @@ async function activateMaze(nextMaze, level, description) {
     document.getElementById("output").value = "";
     await pyodide.runPythonAsync("_sync_maze_from_js()");
 
-    setMazeStatus(description);
+    setMazeStatus("");
     document.dispatchEvent(new CustomEvent("maze:changed", {
         detail: {
             level,
@@ -602,7 +605,7 @@ async function loadPresetMaze(level) {
         ]);
         if (changeId !== mazeChangeCounter) return;
 
-        await activateMaze(nextMaze, level, `${config.label} loaded.`);
+        await activateMaze(nextMaze, level);
     } catch (error) {
         if (changeId !== mazeChangeCounter) return;
         setMazeStatus(`Could not load ${config.label.toLowerCase()}.`, true);
@@ -634,11 +637,7 @@ PMG_MAZE_GENERATOR.maze_to_text(
 `);
         if (changeId !== mazeChangeCounter) return;
 
-        await activateMaze(
-            parseMazeText(String(generatedText)),
-            generatedLevel,
-            `New ${config.label.toLowerCase()} maze generated.`,
-        );
+        await activateMaze(parseMazeText(String(generatedText)), generatedLevel);
     } catch (error) {
         if (changeId !== mazeChangeCounter) return;
         setMazeStatus("Could not generate a new maze.", true);
@@ -720,7 +719,6 @@ async function runProgram() {
             `Reached the goal in ${moves} moves. ` +
             `The shortest route is ${shortestRoute}.`,
         );
-        setMazeStatus(`Solved in ${moves} moves (shortest route ${shortestRoute}).`);
     } else if (!hadError) {
         appendOutput("Program finished without reaching goal.");
     }
@@ -857,7 +855,8 @@ globalThis.mazeGame = {
     /* Display an arbitrary maze, e.g. one that a challenge run failed on. */
     loadMazeText: async (text, level, description) => {
         await pyodideReadyPromise;
-        await activateMaze(parseMazeText(String(text)), level, description);
+        await activateMaze(parseMazeText(String(text)), level);
+        if (description) setMazeStatus(description);
     },
 
     /* Disable the run and maze controls while a long task is in progress. */

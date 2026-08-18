@@ -7,20 +7,20 @@
 
 const RIGHT_HAND_ROUND = "if path_right():\n    turn_right()\n    move()\nelif path_ahead():\n    move()\nelse:\n    turn_left()";
 
-const RIGHT_HAND_SOLVER = "while not at_goal():\n    if path_right():\n        turn_right()\n        move()\n    elif path_ahead():\n        move()\n    else:\n        turn_left()";
-
 const tutorialDefinitions = {
     programming: {
         label: "New to coding",
         steps: [
             {
                 target: "#runBtn",
-                title: "Make something move",
+                title: "Press Run and see what happens",
                 body: `
-                    <p>There is already a short program in the editor.</p>
+                    <p>There is a program in the editor already. Nobody expects you
+                    to understand it yet.</p>
                     <p>Press <strong>Run program</strong> and watch the blue
                     triangle.</p>
-                    <p>Greyed out? Python is still loading.</p>
+                    <p>Button greyed out? Python is still starting up — it takes a
+                    few seconds the first time.</p>
                 `,
                 code: "move()\nmove()\nmove()",
                 autoInsert: true,
@@ -148,29 +148,18 @@ const tutorialDefinitions = {
                 failure: "Expected a right turn and a move. Insert the example again and press Run program.",
             },
             {
-                target: "#runBtn",
-                title: "Solve the whole maze",
+                target: "#code",
+                title: "Over to you",
                 body: `
+                    <p>You now have both halves. The rule you just ran chooses one
+                    action; a loop repeats it.</p>
                     <p><code>at_goal()</code> is <code>True</code> only on the green
-                    square, and <code>not</code> flips it. So this repeats the rule
-                    until you arrive.</p>
-                    <p>Insert it, press <strong>Run program</strong> and watch.</p>
-                `,
-                code: RIGHT_HAND_SOLVER,
-                requiresRun: true,
-                validate: result => !result.hadError && result.reached === true,
-                failure: "Not on the green square yet. Insert the example again, keeping the rule indented inside the loop, and run it.",
-            },
-            {
-                target: "#mazeControls",
-                title: "You solved the maze",
-                body: `
-                    <p>Eight lines of Python did that on their own.</p>
-                    <p>Now try to break it. Pick a harder maze from the
-                    <strong>Maze</strong> menu, or <strong>Generate new maze</strong>.
-                    Does your rule still work?</p>
-                    <p>The <strong>Beginner Guide</strong> tab explains what to try
-                    next.</p>
+                    square, and <code>not</code> flips it — so
+                    <code>while not at_goal():</code> keeps going until you arrive.
+                    Put the rule inside it, indented.</p>
+                    <p>Have a go. If you get stuck, the <strong>Beginner Guide</strong>
+                    tab builds it up line by line, and <strong>Load sample</strong>
+                    shows one finished answer.</p>
                 `,
                 final: true,
             },
@@ -242,22 +231,21 @@ const tutorialDefinitions = {
                 target: "#code",
                 title: "while not at_goal()",
                 body: `
-                    <p><code>not</code> inverts a Boolean, so this loop repeats until
-                    the triangle stands on the goal.</p>
-                    <p>The same three branches, repeated, are the right-hand wall
-                    follower. Run it and the maze is solved.</p>
+                    <p><code>not</code> inverts a Boolean, so
+                    <code>while not at_goal():</code> repeats until the triangle
+                    stands on the goal.</p>
+                    <p>Those same three branches, indented inside that loop, are a
+                    right-hand wall follower. Write it yourself — or take
+                    <strong>Load sample</strong> if you would rather skip ahead to
+                    breaking it.</p>
                 `,
-                code: RIGHT_HAND_SOLVER,
-                requiresRun: true,
-                validate: result => !result.hadError && result.reached === true,
-                failure: "The triangle did not finish on the goal. Restore the example and check the indentation inside the loop.",
             },
             {
                 target: "#mazeControls",
-                title: "Solved — now break it",
+                title: "Then go and break it",
                 body: `
                     <p>Wall following works here because Easy and Medium mazes have no
-                    loops. Hard and Expert do.</p>
+                    loops. Everything after them does.</p>
                     <p>Use the <strong>Maze</strong> menu or <strong>Generate new
                     maze</strong> to find a layout that defeats it, then work out what
                     a solver would have to remember. The <strong>Beginner Guide</strong>

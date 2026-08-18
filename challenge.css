@@ -215,12 +215,6 @@
     cursor: wait;
 }
 
-.challenge-note {
-    margin: 10px 0 0;
-    color: #52606b;
-    font-size: 12px;
-}
-
 .challenge-panel button:focus-visible {
     outline: 3px solid #17222a;
     outline-offset: 2px;

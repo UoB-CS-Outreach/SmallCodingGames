@@ -3,10 +3,10 @@
  *
  * A wall follower usually works the first time it is run, which is not the
  * same as being correct. Challenge mode runs the program that is currently in
- * the editor against forty freshly generated mazes — ten per difficulty — and
- * stops at the first maze it fails. On Hard and Expert that failure is the
- * point of the exercise, so the failing maze can be loaded into the main view
- * and watched.
+ * the editor against a fixed set of freshly generated mazes, twenty-five per
+ * difficulty, and stops at the first one it fails. That failure is the point
+ * of the exercise, so the failing maze can be loaded into the main view and
+ * watched.
  *
  * The maze, Python and drawing all stay in maze.js; everything here goes
  * through the globalThis.mazeGame bridge it publishes. The markup is built in
@@ -20,11 +20,6 @@
 (function () {
     "use strict";
 
-    /*
-      Ten mazes per difficulty, always seeds 1 to 10, so everyone in the room
-      runs exactly the same set and a demonstrator can reproduce a failure by
-      asking for that difficulty and seed again.
-    */
     /*
       maxSteps is per maze, and is measured rather than guessed. A solver that
       remembers where it has been — the strategy these difficulties are meant
@@ -63,17 +58,9 @@
     const TOTAL_MAZES = TIERS.length * SEEDS.length;
 
     /*
-      Every per-maze budget above is measured rather than guessed. The taught
-      right-hand solver needs at most 2,046 executed lines on Easy, 5,484 on
-      Medium and 7,562 on the Hard and Expert mazes it can solve; a solver
-      that remembers where it has been needs about 25,000 on a Plaza and
-      100,000 on a Marathon. Anything tighter fails programs that are correct,
-      which would teach the wrong lesson, while a program going in circles
-      still hits the limit in milliseconds.
-
-      The seconds limit is a second safety net for a program that loops
-      without calling anything: Python itself is fast here, spending only
-      ~60ms on a Marathon maze it solves.
+      A second safety net, for a program that loops without calling anything.
+      Python itself is fast here, spending only ~60ms on a Marathon maze it
+      solves, so this is generous.
     */
     const CHALLENGE_MAX_SECONDS = 3;
 
@@ -141,11 +128,9 @@
         panel.appendChild(createElement(
             "p",
             "challenge-intro",
-            `Run the program in the editor against ${TOTAL_MAZES} new mazes: ` +
-            `${SEEDS.length} each of ${TIERS.map(tier => tier.label).join(", ")}. ` +
-            "It stops at the first maze your program cannot solve. Easy and " +
-            "Medium are guaranteed for a right-hand wall follower; nothing " +
-            "after them is. Par compares your moves with the shortest route.",
+            `Does your program really work, or did it just get lucky? This runs ` +
+            `it against ${TOTAL_MAZES} fresh mazes and stops at the first one it ` +
+            "cannot solve.",
         ));
 
         const actions = createElement("div", "challenge-actions");
@@ -201,13 +186,6 @@
         elements.failure.appendChild(elements.failureText);
         elements.failure.appendChild(elements.loadButton);
         panel.appendChild(elements.failure);
-
-        panel.appendChild(createElement(
-            "p",
-            "challenge-note",
-            "Challenge runs are not animated and print() output is hidden, so " +
-            `that ${TOTAL_MAZES} mazes take seconds rather than minutes.`,
-        ));
 
         return panel;
     }
@@ -275,7 +253,7 @@
 
         if (solved.length > 0) {
             const moves = average(solved.map(result => result.moves));
-            text += ` · ${moves} moves on average · ${parFor(results).toFixed(1)}× par`;
+            text += ` · ${moves} moves on average (${parFor(results).toFixed(1)}× par)`;
         }
         if (solved.length < results.length) {
             text += ` · failed on maze ${results[results.length - 1].seed}`;
@@ -288,26 +266,19 @@
         elements.tiers.get(tier.key).result.textContent = describeTier(tier, results);
     }
 
-    /* The headline: "Easy 25/25 · Medium 25/25 · Hard 14/25 · Expert —". */
+    /*
+      One headline figure. The per-difficulty breakdown is on the rows just
+      below, so repeating it here only made a long unreadable line.
+    */
     function updateSummary() {
         elements.summary.hidden = false;
-        const solvedTotal = TIERS.reduce((total, tier) => {
-            const results = state.results.get(tier.key) || [];
-            return total + results.filter(result => result.reached).length;
-        }, 0);
         const allResults = [...state.results.values()].flat();
+        const solvedTotal = allResults.filter(result => result.reached).length;
         const par = parFor(allResults);
 
-        const tiers = TIERS.map(tier => {
-            const results = state.results.get(tier.key) || [];
-            if (results.length === 0) return `${tier.label} —`;
-            const solved = results.filter(result => result.reached).length;
-            return `${tier.label} ${solved}/${SEEDS.length}`;
-        }).join(" · ");
-
         elements.summary.textContent = par === null
-            ? tiers
-            : `${tiers} · overall ${solvedTotal} solved at ${par.toFixed(1)}× par`;
+            ? `${solvedTotal} of ${TOTAL_MAZES} solved`
+            : `${solvedTotal} of ${TOTAL_MAZES} solved · ${par.toFixed(1)}× par`;
     }
 
     function resetProgress() {
@@ -328,13 +299,12 @@
     /* Explain a failure in the terms the activity uses, not in Python terms. */
     function describeFailure(result) {
         if (result.reason === "stuck") {
-            const tier = TIERS.find(entry => entry.key === result.level);
+            const laps = Math.round(result.moves / Math.max(1, result.shortest));
             return (
-                "Your program was still running after " +
-                `${tier.maxSteps.toLocaleString()} steps. It had made ` +
-                `${result.moves} moves on a maze whose shortest route is ` +
-                `${result.shortest} moves, so it is going round and round rather ` +
-                "than making progress."
+                `It walked ${result.moves.toLocaleString()} moves without finding ` +
+                `the goal — about ${laps} times the length of the shortest route ` +
+                `(${result.shortest} moves). It is retracing the same loop, and ` +
+                "nothing it can see tells it that it has been there before."
             );
         }
         if (result.reason === "error") {
@@ -461,7 +431,7 @@
         elements.startButton.disabled = true;
         elements.stopButton.hidden = false;
         game.setBusy(true);
-        game.setStatus("Challenge mode is running. The maze below is untouched.");
+        game.setStatus("Running the challenge…");
 
         let failed = null;
 
@@ -535,11 +505,7 @@
             elements.startButton.disabled = false;
             elements.stopButton.hidden = true;
             game.setBusy(false);
-            game.setStatus(
-                failed
-                    ? "Challenge finished. Load the failing maze to watch it."
-                    : "Challenge finished. The maze here is unchanged.",
-            );
+            game.setStatus(failed ? "Load the failing maze to watch it." : "");
         }
     }
 

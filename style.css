@@ -314,10 +314,14 @@ h2 {
 }
 
 #mazeStatus {
-    min-height: 1.4em;
     margin: 10px 0 0;
     color: var(--muted);
     font-size: 0.85rem;
+}
+
+/* Nothing to report: take up no room at all rather than leaving a gap. */
+#mazeStatus:empty {
+    margin: 0;
 }
 
 #mazeStatus.error {
@@ -454,13 +458,14 @@ textarea {
 }
 
 /*
-  Deliberately one column. Two columns under a two-button tab bar reads as
-  though the right-hand column belongs to the other tab, and it makes a
-  scrolling panel jump back to the top halfway through. A comfortable
-  measure is set instead.
+  Deliberately one column: two columns under a two-button tab bar read as
+  though the right-hand column belonged to the other tab, and they make a
+  scrolling panel jump back to the top halfway through. The text is held to a
+  comfortable measure and centred, so the panel does not look half empty.
 */
 .tabs-content .tab-pane.active {
-    max-width: 78ch;
+    max-width: 92ch;
+    margin: 0 auto;
 }
 
 .tabs-content ul,

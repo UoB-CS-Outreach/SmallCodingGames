@@ -149,52 +149,10 @@
                                 <li><strong>Load sample</strong> loads a right-hand-wall
                                     solver into the code box.
                                 </li>
-                            </ul>
-                        </div>
-
-                        <div class="tab-section">
-                            <p><strong>The four difficulties</strong></p>
-                            <p>Each difficulty is a bigger maze, but more importantly
-                                it adds a new idea for your program to cope with:</p>
-                            <!-- Extra challenges are described after this list. -->
-                            <ul>
-                                <li><strong>Easy</strong> — one winding route. Turns,
-                                    but no branches and no dead ends.
-                                </li>
-                                <li><strong>Medium</strong> — junctions and dead ends,
-                                    still with exactly one route between any two
-                                    squares.
-                                </li>
-                                <li><strong>Hard</strong> — loops and separate wall
-                                    islands, so a route can bring you back to where
-                                    you started.
-                                </li>
-                                <li><strong>Expert</strong> — many loops plus open
-                                    areas with no single wall to follow.
-                                </li>
-                            </ul>
-                            <p><strong>Generate new maze</strong> builds a fresh
-                                layout of the same difficulty, so a solution that only
-                                works once is easy to spot.</p>
-                        </div>
-
-                        <div class="tab-section">
-                            <p><strong>Extra challenges</strong></p>
-                            <p>Two more maze types sit below the difficulties in the
-                                Maze menu. Neither adds a new command; both break a
-                                strategy that works everywhere else:</p>
-                            <ul>
-                                <li><strong>Plaza</strong> — an open hall of
-                                    free-standing pillars. There is no long wall to
-                                    follow, so a hand kept on a wall goes around one
-                                    pillar and stays there. Wall following has never
-                                    solved one of these.
-                                </li>
-                                <li><strong>Marathon</strong> — the Expert idea over
-                                    twice the area, with routes twice as long. A
-                                    program that wanders can run out of steps before it
-                                    arrives, so it is not enough to be correct: you have
-                                    to be reasonably direct.
+                                <li>The <strong>Maze</strong> menu changes difficulty, and
+                                    <strong>Generate new maze</strong> builds a fresh
+                                    layout of the one you are on — so a program that only
+                                    works on a single maze is easy to spot.
                                 </li>
                             </ul>
                         </div>
@@ -215,10 +173,11 @@
                                 </li>
                             </ul>
 
-                            <p><strong>Question functions</strong></p>
-                            <p>These inspect the maze without moving the triangle.
-                                Directions are relative to the way it is currently facing.
-                                Each returns <code>True</code> or <code>False</code>.</p>
+                            <p><strong>Checking functions</strong></p>
+                            <p>These look at the maze without moving the triangle, and
+                                each one answers <code>True</code> or <code>False</code>.
+                                Directions are relative to the way it is currently
+                                facing.</p>
                             <ul>
                                 <li><code>path_ahead()</code> — is the square directly
                                     ahead open?
