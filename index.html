@@ -71,6 +71,12 @@
                         <option value="hard">Hard — loops and wall islands</option>
                         <option value="expert">Expert — loops and open areas</option>
                     </optgroup>
+                    <optgroup label="Extra challenges">
+                        <option value="plaza">Plaza — pillars, no wall to follow
+                        </option>
+                        <option value="marathon">Marathon — a very large maze
+                        </option>
+                    </optgroup>
                 </select>
                 <button id="generateMazeBtn" class="button secondary" type="button"
                         disabled>
@@ -150,6 +156,7 @@
                             <p><strong>The four difficulties</strong></p>
                             <p>Each difficulty is a bigger maze, but more importantly
                                 it adds a new idea for your program to cope with:</p>
+                            <!-- Extra challenges are described after this list. -->
                             <ul>
                                 <li><strong>Easy</strong> — one winding route. Turns,
                                     but no branches and no dead ends.
@@ -169,6 +176,27 @@
                             <p><strong>Generate new maze</strong> builds a fresh
                                 layout of the same difficulty, so a solution that only
                                 works once is easy to spot.</p>
+                        </div>
+
+                        <div class="tab-section">
+                            <p><strong>Extra challenges</strong></p>
+                            <p>Two more maze types sit below the difficulties in the
+                                Maze menu. Neither adds a new command; both break a
+                                strategy that works everywhere else:</p>
+                            <ul>
+                                <li><strong>Plaza</strong> — an open hall of
+                                    free-standing pillars. There is no long wall to
+                                    follow, so a hand kept on a wall goes around one
+                                    pillar and stays there. Wall following has never
+                                    solved one of these.
+                                </li>
+                                <li><strong>Marathon</strong> — the Expert idea over
+                                    twice the area, with routes twice as long. A
+                                    program that wanders can run out of steps before it
+                                    arrives, so it is not enough to be correct: you have
+                                    to be reasonably direct.
+                                </li>
+                            </ul>
                         </div>
 
                         <div class="tab-section">

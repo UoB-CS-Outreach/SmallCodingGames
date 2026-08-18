@@ -141,6 +141,14 @@ class ChallengeRunTests(MazeApiTestCase):
         self.assertEqual(result["level"], "easy")
         self.assertEqual(result["seed"], 1)
 
+    def test_the_lines_a_program_used_are_reported(self):
+        # Challenge mode sets each difficulty's budget from this figure, so a
+        # solved maze has to report what it actually cost.
+        result = self.run_challenge(RIGHT_HAND_SOLVER)
+
+        self.assertGreater(result["steps"], result["moves"])
+        self.assertLess(result["steps"], 15000)
+
     def test_the_same_seed_always_gives_the_same_maze(self):
         first = self.run_challenge(RIGHT_HAND_SOLVER)
         second = self.run_challenge(RIGHT_HAND_SOLVER)

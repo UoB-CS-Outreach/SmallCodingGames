@@ -156,6 +156,8 @@ class CheckedInPresetTests(unittest.TestCase):
         "medium_crossroads.txt": "medium",
         "hard_switchbacks.txt": "hard",
         "expert_archipelago.txt": "expert",
+        "plaza_pillars.txt": "plaza",
+        "marathon_sprawl.txt": "marathon",
     }
 
     def load(self, name):
@@ -256,6 +258,45 @@ class DifficultyStructureTests(unittest.TestCase):
         ]
         self.assertEqual(areas, sorted(areas))
 
+    def test_plaza_is_open_ground_with_separate_pillars(self):
+        for seed in self.SEEDS:
+            with self.subTest(seed=seed):
+                maze = generate_difficulty("plaza", seed=seed)
+                # Every pillar is an island, so the floor is one open space.
+                validate_maze(maze, require_all_passages_connected=True)
+                # Wide open ground, not corridors: loops far outnumber a
+                # braided maze's, and there are no dead ends to be trapped in.
+                self.assertGreater(count_passage_loops(maze), 100)
+                self.assertEqual(count_dead_ends(maze), 0)
+
+    def test_plaza_start_and_goal_avoid_the_outer_wall(self):
+        # Both against the border would let a wall follower simply walk round
+        # the outside from one to the other.
+        for seed in self.SEEDS:
+            with self.subTest(seed=seed):
+                maze = generate_difficulty("plaza", seed=seed)
+                rows, columns = len(maze), len(maze[0])
+                for marker in "SG":
+                    row = next(i for i, line in enumerate(maze) if marker in line)
+                    column = maze[row].index(marker)
+                    self.assertTrue(2 <= row <= rows - 3)
+                    self.assertTrue(2 <= column <= columns - 3)
+
+    def test_marathon_is_expert_structure_at_a_bigger_scale(self):
+        expert = DIFFICULTIES["expert"]
+        marathon = DIFFICULTIES["marathon"]
+        self.assertEqual(marathon["style"], expert["style"])
+        self.assertGreater(
+            int(marathon["rows"]) * int(marathon["columns"]),
+            1.8 * int(expert["rows"]) * int(expert["columns"]),
+        )
+
+        for seed in self.SEEDS:
+            with self.subTest(seed=seed):
+                maze = generate_difficulty("marathon", seed=seed)
+                self.assertGreaterEqual(count_passage_loops(maze), 1)
+                self.assertGreater(len(find_solution(maze)), 80)
+
 
 class TaughtStrategyTests(unittest.TestCase):
     """The guide promises a guarantee up to medium, and only up to medium."""
@@ -282,6 +323,35 @@ class TaughtStrategyTests(unittest.TestCase):
             for seed in self.SEEDS
         )
         self.assertGreater(failures, 0)
+
+    def test_no_plaza_can_be_solved_by_following_a_wall(self):
+        # A plaza has no wall worth following, so this is the one level where
+        # the taught strategy is expected to fail every single time.
+        for seed in self.SEEDS:
+            with self.subTest(seed=seed):
+                maze = generate_difficulty("plaza", seed=seed)
+                self.assertFalse(solve_with_rule(maze, RIGHT_HAND_RULE))
+                self.assertFalse(solve_with_rule(maze, FORWARD_FIRST_RULE))
+
+    def test_the_challenge_seed_set_defeats_the_taught_solver(self):
+        # Challenge mode runs seeds 1-25 of each level in order and stops at
+        # the first failure. It has to actually stop somewhere, or it teaches
+        # that wall following is good enough.
+        challenge_seeds = range(1, 26)
+        for level in ("easy", "medium"):
+            for seed in challenge_seeds:
+                with self.subTest(level=level, seed=seed):
+                    maze = generate_difficulty(level, seed=seed)
+                    self.assertTrue(solve_with_rule(maze, RIGHT_HAND_RULE))
+
+        failed = [
+            seed
+            for seed in challenge_seeds
+            if not solve_with_rule(
+                generate_difficulty("hard", seed=seed), RIGHT_HAND_RULE
+            )
+        ]
+        self.assertTrue(failed, "the challenge should stop the solver by Hard")
 
 
 if __name__ == "__main__":

@@ -25,29 +25,57 @@
       runs exactly the same set and a demonstrator can reproduce a failure by
       asking for that difficulty and seed again.
     */
+    /*
+      maxSteps is per maze, and is measured rather than guessed. A solver that
+      remembers where it has been — the strategy these difficulties are meant
+      to reward — solves all 25 mazes of every tier, and its worst run costs:
+
+          Easy 5,227 · Medium 14,236 · Hard 26,979
+          Expert 44,084 · Plaza 58,371 · Marathon 88,905 executed lines
+
+      Exploring open ground and large mazes costs lines, so one budget for all
+      six would fail correct programs on the bigger difficulties and teach
+      exactly the wrong lesson. Each is set to roughly twice its measured
+      worst case, leaving room for a less tidy but still correct program. A
+      program going round in circles never finishes anyway, so a generous
+      budget costs it nothing but a few milliseconds.
+    */
     const TIERS = [
-        {key: "easy", label: "Easy"},
-        {key: "medium", label: "Medium"},
-        {key: "hard", label: "Hard"},
-        {key: "expert", label: "Expert"},
+        {key: "easy", label: "Easy", maxSteps: 15000},
+        {key: "medium", label: "Medium", maxSteps: 30000},
+        {key: "hard", label: "Hard", maxSteps: 60000},
+        {key: "expert", label: "Expert", maxSteps: 90000},
+        {key: "plaza", label: "Plaza", maxSteps: 120000},
+        {key: "marathon", label: "Marathon", maxSteps: 180000},
     ];
-    const SEEDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    /*
+      Twenty-five mazes per difficulty, always seeds 1 to 25, so everyone in
+      the room runs exactly the same set and a demonstrator can reproduce a
+      failure by asking for that difficulty and seed again.
+
+      Twenty-five rather than ten because ten is not enough to make the point:
+      the taught right-hand solver happens to solve Hard seeds 1 to 10, so it
+      only came unstuck on Expert. Over twenty-five it fails four Hard mazes,
+      the first being seed 15, and twelve Expert ones. A strategy with no
+      memory should not be able to pass this.
+    */
+    const SEEDS = Array.from({length: 25}, (unused, index) => index + 1);
+    const TOTAL_MAZES = TIERS.length * SEEDS.length;
 
     /*
-      A normal run allows 50,000 executed lines. Challenge mode allows far
-      fewer, because a solver that is circling a wall island never stops on its
-      own and we need that answer in milliseconds, forty times over.
-
-      The number is measured, not guessed: across these forty mazes the taught
+      Every per-maze budget above is measured rather than guessed. The taught
       right-hand solver needs at most 2,046 executed lines on Easy, 5,484 on
-      Medium and 7,562 on the Hard and Expert mazes it can solve. A budget
-      below about 8,000 therefore fails mazes that a correct program does
-      solve, which would teach the wrong lesson. This leaves roughly twice the
-      worst measured case for a less efficient but still correct program, and
-      still stops a looping one in a few milliseconds.
+      Medium and 7,562 on the Hard and Expert mazes it can solve; a solver
+      that remembers where it has been needs about 25,000 on a Plaza and
+      100,000 on a Marathon. Anything tighter fails programs that are correct,
+      which would teach the wrong lesson, while a program going in circles
+      still hits the limit in milliseconds.
+
+      The seconds limit is a second safety net for a program that loops
+      without calling anything: Python itself is fast here, spending only
+      ~60ms on a Marathon maze it solves.
     */
-    const CHALLENGE_MAX_STEPS = 15000;
-    const CHALLENGE_MAX_SECONDS = 2;
+    const CHALLENGE_MAX_SECONDS = 3;
 
     const IDLE_STATUS =
         "Not run yet. Put your solver in the code editor, then start the " +
@@ -113,15 +141,16 @@
         panel.appendChild(createElement(
             "p",
             "challenge-intro",
-            "Run the program in the editor against 40 new mazes: ten each of " +
-            "Easy, Medium, Hard and Expert. It stops at the first maze your " +
-            "program cannot solve. Easy and Medium are guaranteed for a " +
-            "right-hand wall follower. Hard and Expert are not.",
+            `Run the program in the editor against ${TOTAL_MAZES} new mazes: ` +
+            `${SEEDS.length} each of ${TIERS.map(tier => tier.label).join(", ")}. ` +
+            "It stops at the first maze your program cannot solve. Easy and " +
+            "Medium are guaranteed for a right-hand wall follower; nothing " +
+            "after them is. Par compares your moves with the shortest route.",
         ));
 
         const actions = createElement("div", "challenge-actions");
         elements.startButton = createElement(
-            "button", "challenge-start", "Run challenge (40 mazes)",
+            "button", "challenge-start", `Run challenge (${TOTAL_MAZES} mazes)`,
         );
         elements.startButton.type = "button";
         elements.startButton.disabled = true;
@@ -177,7 +206,7 @@
             "p",
             "challenge-note",
             "Challenge runs are not animated and print() output is hidden, so " +
-            "that 40 mazes take seconds rather than minutes.",
+            `that ${TOTAL_MAZES} mazes take seconds rather than minutes.`,
         ));
 
         return panel;
@@ -223,6 +252,20 @@
         return Math.round(total / values.length);
     }
 
+    /*
+      Par is the moves used divided by the shortest route, so 1.0 is a perfect
+      line to the goal and 3.0 means walking three times further than needed.
+      Reaching the goal is the pass mark; par is the score, and it gives a
+      learner whose solver already works something to improve.
+    */
+    function parFor(results) {
+        const ratios = results
+            .filter(result => result.reached && result.shortest > 0)
+            .map(result => result.moves / result.shortest);
+        if (ratios.length === 0) return null;
+        return ratios.reduce((sum, ratio) => sum + ratio, 0) / ratios.length;
+    }
+
     /* One line per difficulty: how many were solved and how efficiently. */
     function describeTier(tier, results) {
         if (results.length === 0) return "Not run";
@@ -232,8 +275,7 @@
 
         if (solved.length > 0) {
             const moves = average(solved.map(result => result.moves));
-            const shortest = average(solved.map(result => result.shortest || 0));
-            text += ` · ${moves} moves on average (shortest route ${shortest})`;
+            text += ` · ${moves} moves on average · ${parFor(results).toFixed(1)}× par`;
         }
         if (solved.length < results.length) {
             text += ` · failed on maze ${results[results.length - 1].seed}`;
@@ -246,15 +288,26 @@
         elements.tiers.get(tier.key).result.textContent = describeTier(tier, results);
     }
 
-    /* The headline: "Easy 10/10 · Medium 10/10 · Hard 7/10 · Expert —". */
+    /* The headline: "Easy 25/25 · Medium 25/25 · Hard 14/25 · Expert —". */
     function updateSummary() {
         elements.summary.hidden = false;
-        elements.summary.textContent = TIERS.map(tier => {
+        const solvedTotal = TIERS.reduce((total, tier) => {
+            const results = state.results.get(tier.key) || [];
+            return total + results.filter(result => result.reached).length;
+        }, 0);
+        const allResults = [...state.results.values()].flat();
+        const par = parFor(allResults);
+
+        const tiers = TIERS.map(tier => {
             const results = state.results.get(tier.key) || [];
             if (results.length === 0) return `${tier.label} —`;
             const solved = results.filter(result => result.reached).length;
             return `${tier.label} ${solved}/${SEEDS.length}`;
         }).join(" · ");
+
+        elements.summary.textContent = par === null
+            ? tiers
+            : `${tiers} · overall ${solvedTotal} solved at ${par.toFixed(1)}× par`;
     }
 
     function resetProgress() {
@@ -275,9 +328,10 @@
     /* Explain a failure in the terms the activity uses, not in Python terms. */
     function describeFailure(result) {
         if (result.reason === "stuck") {
+            const tier = TIERS.find(entry => entry.key === result.level);
             return (
                 "Your program was still running after " +
-                `${CHALLENGE_MAX_STEPS.toLocaleString()} steps. It had made ` +
+                `${tier.maxSteps.toLocaleString()} steps. It had made ` +
                 `${result.moves} moves on a maze whose shortest route is ` +
                 `${result.shortest} moves, so it is going round and round rather ` +
                 "than making progress."
@@ -381,10 +435,11 @@
     }
 
     /* One maze per Pyodide call, so each call is short. */
-    async function runOneMaze(level, seed) {
+    async function runOneMaze(tier, seed) {
         const game = globalThis.mazeGame;
-        await game.setGlobal("PMG_CHALLENGE_LEVEL", level);
+        await game.setGlobal("PMG_CHALLENGE_LEVEL", tier.key);
         await game.setGlobal("PMG_CHALLENGE_SEED", seed);
+        await game.setGlobal("PMG_CHALLENGE_MAX_STEPS", tier.maxSteps);
 
         const json = await game.runPython(
             "run_challenge_maze(PMG_CHALLENGE_SRC, PMG_CHALLENGE_LEVEL, " +
@@ -413,7 +468,6 @@
         try {
             await game.ready();
             await game.setGlobal("PMG_CHALLENGE_SRC", game.getCode());
-            await game.setGlobal("PMG_CHALLENGE_MAX_STEPS", CHALLENGE_MAX_STEPS);
             await game.setGlobal("PMG_CHALLENGE_MAX_SECONDS", CHALLENGE_MAX_SECONDS);
 
             for (const tier of TIERS) {
@@ -437,7 +491,7 @@
                     */
                     await nextPaint();
 
-                    const result = await runOneMaze(tier.key, seed);
+                    const result = await runOneMaze(tier, seed);
                     results.push(result);
 
                     markCell(
@@ -470,8 +524,8 @@
                 setStatus("Challenge stopped.");
             } else {
                 setStatus(
-                    `All ${TIERS.length * SEEDS.length} mazes solved. ` +
-                    "Your program is not just lucky.",
+                    `All ${TOTAL_MAZES} mazes solved. Your program is not ` +
+                    "just lucky.",
                 );
             }
         } catch (error) {

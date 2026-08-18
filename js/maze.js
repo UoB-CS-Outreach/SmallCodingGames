@@ -43,6 +43,16 @@ const MAZE_LEVELS = {
         url: "mazes/expert_archipelago.txt",
         difficulty: "expert",
     },
+    plaza: {
+        label: "Plaza",
+        url: "mazes/plaza_pillars.txt",
+        difficulty: "plaza",
+    },
+    marathon: {
+        label: "Marathon",
+        url: "mazes/marathon_sprawl.txt",
+        difficulty: "marathon",
+    },
 };
 
 let currentMazeLevel = "tutorial";
@@ -668,12 +678,18 @@ async function runProgram() {
 
     // Run the user's Python program
     try {
-        // Budget for a generous but finite program. A looping wall follower
-        // reaches this in a couple of seconds, which keeps the wait before a
-        // StepLimitError short enough to stay interesting.
+        /*
+          The budget exists to stop infinite loops, not to cap how big a maze
+          may be. A solver that remembers where it has been was measured at up
+          to 88,905 executed lines on a Marathon maze, and Python spends only
+          ~60ms on that, so the limit sits well clear of it. A program going
+          round in circles still hits the limit in a fraction of a second;
+          what the learner then waits for is the animation, which is capped
+          separately.
+        */
         pyodide.globals.set("PMG_SRC", code);
         pyodide.globals.set("PMG_MAX_SECONDS", 5);
-        pyodide.globals.set("PMG_MAX_STEPS", 25000);
+        pyodide.globals.set("PMG_MAX_STEPS", 250000);
 
         await pyodide.runPythonAsync("run_user_code(PMG_SRC, PMG_MAX_SECONDS, PMG_MAX_STEPS)");
     } catch (err) {

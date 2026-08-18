@@ -14,6 +14,11 @@ hard         braided     A few loops and wall islands, so a purely local
                          rule can repeat the same route forever.
 expert       braided     Many loops, islands and open rooms.
              + rooms
+plaza        plaza       An open hall of free-standing pillars: no wall
+                         worth following at all.
+marathon     braided     Expert's structure at twice the area, with routes
+             + rooms     long enough that an inefficient one runs out of
+                         steps before it arrives.
 ===========  ==========  ==================================================
 
 The right-hand rule is guaranteed on ``corridor`` and ``perfect`` mazes
@@ -51,7 +56,7 @@ GOAL = "G"
 _DIRECTIONS: Tuple[Coordinate, ...] = ((-1, 0), (0, 1), (1, 0), (0, -1))
 _CARVED_STYLES = {"corridor", "perfect", "braided"}
 _LOOP_FREE_STYLES = {"corridor", "perfect"}
-_STYLES = _CARVED_STYLES | {"blocks"}
+_STYLES = _CARVED_STYLES | {"blocks", "plaza"}
 
 #: Structure of each difficulty offered by the game. Sizes grow, but the
 #: important change is the topology: see the module docstring.
@@ -66,6 +71,14 @@ DIFFICULTIES: Dict[str, Dict[str, object]] = {
         "braid": 0.55,
         "rooms": 3,
     },
+    "plaza": {"rows": 21, "columns": 29, "style": "plaza", "pillar_density": 0.65},
+    "marathon": {
+        "rows": 29,
+        "columns": 41,
+        "style": "braided",
+        "braid": 0.45,
+        "rooms": 5,
+    },
 }
 
 
@@ -77,6 +90,7 @@ def generate_maze(
     style: str = "braided",
     braid: float = 0.15,
     rooms: int = 0,
+    pillar_density: float = 0.6,
     block_density: float = 0.32,
 ) -> Maze:
     """Return a new solvable maze as a list of equal-length strings.
@@ -85,11 +99,13 @@ def generate_maze(
         rows: Total number of rows, including the solid outer border.
         columns: Total number of columns, including the outer border.
         seed: Optional seed for reproducible output.
-        style: ``corridor``, ``perfect``, ``braided``, or ``blocks``.
+        style: ``corridor``, ``perfect``, ``braided``, ``plaza`` or ``blocks``.
         braid: For ``braided``, the probability of opening each dead end into
             another corridor. Higher values create more loops and wall islands.
         rooms: For ``braided``, the number of open rectangular areas to carve
             out after braiding.
+        pillar_density: For ``plaza``, the chance that each lattice position
+            holds a pillar.
         block_density: For ``blocks``, the probability that an unprotected
             interior cell is a wall.
 
@@ -97,12 +113,15 @@ def generate_maze(
     with one-cell walls. Random-block mazes accept odd or even dimensions.
     Every style guarantees at least one route from ``S`` to ``G``.
     """
-    _validate_options(rows, columns, style, braid, rooms, block_density)
+    _validate_options(rows, columns, style, braid, rooms, pillar_density, block_density)
     rng = random.Random(seed)
 
     if style == "blocks":
         grid = _generate_blocks(rows, columns, rng, block_density)
         start, goal = (1, 1), (rows - 2, columns - 2)
+    elif style == "plaza":
+        grid = _generate_plaza(rows, columns, rng, pillar_density)
+        start, goal = _inner_endpoints(grid)
     elif style == "corridor":
         grid, start, goal = _carve_corridor(rows, columns, rng)
     else:
@@ -120,7 +139,10 @@ def generate_maze(
     # generation strategy breaks solvability, or quietly makes an easier
     # difficulty harder than the taught strategy can handle, it should fail
     # here rather than emit a bad map.
-    validate_maze(maze, require_all_passages_connected=style in _CARVED_STYLES)
+    # Pillars sit on a spaced lattice, so a plaza floor is one open space in
+    # the same way a carved maze is: worth checking rather than assuming.
+    connected_styles = _CARVED_STYLES | {"plaza"}
+    validate_maze(maze, require_all_passages_connected=style in connected_styles)
     loops = count_passage_loops(maze)
     if style in _LOOP_FREE_STYLES and loops != 0:
         raise ValueError(f"{style} mazes must not contain passage loops")
@@ -265,6 +287,7 @@ def _validate_options(
     style: str,
     braid: float,
     rooms: int,
+    pillar_density: float,
     block_density: float,
 ) -> None:
     if rows < 5 or columns < 5:
@@ -280,6 +303,8 @@ def _validate_options(
         raise ValueError("rooms cannot be negative")
     if rooms and style != "braided":
         raise ValueError("Only braided mazes can contain open rooms")
+    if not 0.0 <= pillar_density <= 1.0:
+        raise ValueError("pillar_density must be between 0 and 1")
     if not 0.0 <= block_density <= 1.0:
         raise ValueError("block_density must be between 0 and 1")
 
@@ -417,6 +442,37 @@ def _open_dead_ends(
     return opened
 
 
+def _generate_plaza(
+    rows: int, columns: int, rng: random.Random, density: float
+) -> Grid:
+    """Return an open hall dotted with free-standing pillars.
+
+    Pillars are placed on a lattice with a clear gap between them, so every
+    one is an isolated island of wall and the floor stays connected. There is
+    no long wall to follow here: a hand kept on a pillar goes around that
+    pillar and nowhere else.
+    """
+    grid = [
+        [
+            WALL if row in (0, rows - 1) or column in (0, columns - 1) else PASSAGE
+            for column in range(columns)
+        ]
+        for row in range(rows)
+    ]
+
+    for row in range(2, rows - 2, 3):
+        for column in range(2, columns - 2, 3):
+            if rng.random() > density:
+                continue
+            height = rng.choice((1, 1, 2))
+            width = rng.choice((1, 2, 2))
+            for pillar_row in range(row, min(row + height, rows - 2)):
+                for pillar_column in range(column, min(column + width, columns - 2)):
+                    grid[pillar_row][pillar_column] = WALL
+
+    return grid
+
+
 def _generate_blocks(
     rows: int, columns: int, rng: random.Random, density: float
 ) -> Grid:
@@ -458,7 +514,38 @@ def _distant_endpoints(grid: Grid) -> Tuple[Coordinate, Coordinate]:
     return first, second
 
 
-def _farthest_cell(grid: Grid, origin: Coordinate) -> Tuple[Coordinate, int]:
+def _inner_endpoints(grid: Grid) -> Tuple[Coordinate, Coordinate]:
+    """Pick two distant squares that do not touch the outer wall.
+
+    In an open hall the outer wall is one continuous shape, so a start and a
+    goal placed against it can be joined simply by following it round. Keeping
+    both away from the border is what makes a plaza a real problem: the only
+    walls in reach are pillars, and going around a pillar leads nowhere.
+    """
+    rows, columns = len(grid), len(grid[0])
+    inner = {
+        (row, column)
+        for row in range(2, rows - 2)
+        for column in range(2, columns - 2)
+        if grid[row][column] != WALL
+    }
+    if len(inner) < 2:
+        return _distant_endpoints(grid)
+
+    origin = min(inner)
+    first, _ = _farthest_cell(grid, origin, allowed=inner)
+    second, _ = _farthest_cell(grid, first, allowed=inner)
+    return first, second
+
+
+def _farthest_cell(
+    grid: Grid, origin: Coordinate, allowed: Optional[set] = None
+) -> Tuple[Coordinate, int]:
+    """Return the open square furthest from ``origin``, and how far that is.
+
+    ``allowed`` restricts which squares may be the answer; the search still
+    travels through every open square.
+    """
     rows, columns = len(grid), len(grid[0])
     queue = deque([(origin, 0)])
     seen = {origin}
@@ -467,7 +554,7 @@ def _farthest_cell(grid: Grid, origin: Coordinate) -> Tuple[Coordinate, int]:
 
     while queue:
         current, distance = queue.popleft()
-        if distance > farthest_distance:
+        if distance > farthest_distance and (allowed is None or current in allowed):
             farthest, farthest_distance = current, distance
         for neighbour in _neighbours(current, rows, columns):
             row, column = neighbour
@@ -584,6 +671,12 @@ def _build_parser() -> argparse.ArgumentParser:
         help="open areas to carve into a braided maze (default: 0)",
     )
     parser.add_argument(
+        "--pillar-density",
+        type=float,
+        default=0.6,
+        help="chance of a pillar at each plaza lattice point (default: 0.6)",
+    )
+    parser.add_argument(
         "--block-density",
         type=float,
         default=0.32,
@@ -608,6 +701,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 style=args.style,
                 braid=args.braid,
                 rooms=args.rooms,
+                pillar_density=args.pillar_density,
                 block_density=args.block_density,
             )
     except ValueError as error:

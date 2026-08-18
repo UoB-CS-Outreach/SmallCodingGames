@@ -60,7 +60,10 @@ _sync_maze_from_js()
 def run_user_code(src, max_seconds, max_steps):
     """
     Execute user code with a time + executed-lines limit.
-    Raises TimeoutError if the limits are exceeded.
+
+    Raises StepLimitError if either limit is exceeded, and otherwise returns
+    the number of lines executed. Challenge mode uses that count to set each
+    difficulty's budget from what a correct program really costs.
     """
     start = time.time()
     steps = 0
@@ -94,6 +97,8 @@ def run_user_code(src, max_seconds, max_steps):
         exec(code_obj, globals(), globals())
     finally:
         sys.settrace(None)
+
+    return steps
 
 
 def reset_state():
@@ -183,11 +188,12 @@ def run_challenge_maze(src, level, seed, max_steps=15000, max_seconds=2.0):
         js_enqueue_action = count_action
 
         error = ""
+        steps = max_steps
         # A challenge run executes the program dozens of times, so any print()
         # inside it would flood the Output panel with one copy per maze.
         try:
             with contextlib.redirect_stdout(io.StringIO()):
-                run_user_code(src, max_seconds, max_steps)
+                steps = run_user_code(src, max_seconds, max_steps)
         except Exception as exc:  # noqa: BLE001 - report whatever user code did
             error = f"{type(exc).__name__}: {exc}"
 
@@ -209,6 +215,7 @@ def run_challenge_maze(src, level, seed, max_steps=15000, max_seconds=2.0):
             "seed": seed,
             "reached": reached,
             "moves": moves,
+            "steps": steps,
             "shortest": shortest,
             "reason": reason,
             "error": error,
