@@ -308,11 +308,6 @@ h2 {
     opacity: 0.55;
 }
 
-#mazeControls.maze-controls-prompt {
-    border-radius: 12px;
-    box-shadow: 0 0 0 4px rgba(23, 105, 224, 0.28);
-}
-
 #mazeStatus {
     margin: 10px 0 0;
     color: var(--muted);
@@ -792,14 +787,28 @@ textarea {
   Back and Continue together on the right instead of stranding one of them
   on the left.
 */
+/*
+  Two groups: leaving the tutorial on the left, moving through it on the right.
+  Grouping them matters because the labels grow ("Continue" becomes "Finish
+  tutorial", "Close" becomes "Yes, close it"). Wrapping a flat row of four
+  buttons stranded one of them alone on a second line; wrapping two groups
+  keeps Back and Continue together where they belong.
+*/
 .tutorial-navigation {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
+    justify-content: space-between;
     gap: 8px;
     margin-top: 16px;
     padding-top: 14px;
     border-top: 1px solid var(--line);
+}
+
+.tutorial-navigation-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .tutorial-navigation button {
@@ -807,14 +816,6 @@ textarea {
     padding: 8px 11px;
     font-size: 0.92rem;
     white-space: nowrap;
-}
-
-#tutorialBackBtn {
-    margin-left: auto;
-}
-
-.tutorial-navigation-spacer {
-    display: none;
 }
 
 #tutorialNextBtn {

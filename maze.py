@@ -369,3 +369,15 @@ def at_goal():
     Return True if the player is currently on the goal cell.
     """
     return (row == goal_row) and (col == goal_col)
+
+
+def position():
+    """
+    Return the player's square as a (row, column) pair.
+
+    Rows count down from the top and columns across from the left, both
+    starting at zero. This is the one function that tells a program something
+    it could not work out by looking around it, which is what makes a
+    visited-set solver possible.
+    """
+    return (row, col)

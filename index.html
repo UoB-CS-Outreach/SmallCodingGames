@@ -65,16 +65,16 @@
                 <select id="mazeSelect" disabled>
                     <optgroup label="Difficulty">
                         <option value="tutorial">Tutorial maze</option>
-                        <option value="easy">Easy — one winding route</option>
-                        <option value="medium">Medium — junctions and dead ends
+                        <option value="easy">Easy: one winding route</option>
+                        <option value="medium">Medium: junctions and dead ends
                         </option>
-                        <option value="hard">Hard — loops and wall islands</option>
-                        <option value="expert">Expert — loops and open areas</option>
+                        <option value="hard">Hard: loops and wall islands</option>
+                        <option value="expert">Expert: loops and open areas</option>
                     </optgroup>
                     <optgroup label="Extra challenges">
-                        <option value="plaza">Plaza — pillars, no wall to follow
+                        <option value="plaza">Plaza: pillars, no wall to follow
                         </option>
-                        <option value="marathon">Marathon — a very large maze
+                        <option value="marathon">Marathon: a very large maze
                         </option>
                     </optgroup>
                 </select>
@@ -84,7 +84,7 @@
                 </button>
             </div>
             <p id="mazeStatus" role="status" aria-live="polite">
-                Starting Python — the first load takes a few seconds.
+                Starting Python. The first load takes a few seconds.
             </p>
         </section>
 
@@ -151,8 +151,8 @@
                                 </li>
                                 <li>The <strong>Maze</strong> menu changes difficulty, and
                                     <strong>Generate new maze</strong> builds a fresh
-                                    layout of the one you are on — so a program that only
-                                    works on a single maze is easy to spot.
+                                    layout of the one you are on, so a program that
+                                    only works on a single maze is easy to spot.
                                 </li>
                             </ul>
                         </div>
@@ -161,14 +161,14 @@
                             <p><strong>Action functions</strong></p>
                             <p>These functions change the triangle:</p>
                             <ul>
-                                <li><code>move()</code> — move one square in the direction
+                                <li><code>move()</code>: move one square in the direction
                                     the triangle is facing. It raises a
                                     <code>RuntimeError</code> if a wall is ahead.
                                 </li>
-                                <li><code>turn_left()</code> — turn 90 degrees left without
+                                <li><code>turn_left()</code>: turn 90 degrees left without
                                     moving.
                                 </li>
-                                <li><code>turn_right()</code> — turn 90 degrees right
+                                <li><code>turn_right()</code>: turn 90 degrees right
                                     without moving.
                                 </li>
                             </ul>
@@ -179,22 +179,35 @@
                                 Directions are relative to the way it is currently
                                 facing.</p>
                             <ul>
-                                <li><code>path_ahead()</code> — is the square directly
+                                <li><code>path_ahead()</code>: is the square directly
                                     ahead open?
                                 </li>
-                                <li><code>path_left()</code> — is the square to the
+                                <li><code>path_left()</code>: is the square to the
                                     triangle's left open?
                                 </li>
-                                <li><code>path_right()</code> — is the square to the
+                                <li><code>path_right()</code>: is the square to the
                                     triangle's right open?
                                 </li>
-                                <li><code>path_behind()</code> — is the square directly
+                                <li><code>path_behind()</code>: is the square directly
                                     behind open?
                                 </li>
-                                <li><code>at_goal()</code> — is the triangle on the green
+                                <li><code>at_goal()</code>: is the triangle on the green
                                     goal square?
                                 </li>
                             </ul>
+
+                            <p><strong>Where am I?</strong></p>
+                            <p>One function reports something the triangle cannot see:</p>
+                            <ul>
+                                <li><code>position()</code>: the square the triangle is
+                                    on, as a <code>(row, column)</code> pair counting from
+                                    zero at the top left. Unlike the checks above it does
+                                    not answer <code>True</code> or <code>False</code>.
+                                </li>
+                            </ul>
+                            <p>Storing every <code>position()</code> you have visited is
+                                how a program can tell that it has been somewhere before,
+                                which is exactly what wall following cannot do.</p>
                         </div>
 
                         <div class="tab-section">
@@ -238,7 +251,7 @@ go_forward_until_wall()</code></pre>
                                     <code>while</code> and <code>def</code> lines.
                                 </li>
                                 <li><strong><code>IndentationError</code>:</strong> use the
-                                    same indentation throughout a block—normally four
+                                    same indentation throughout a block, normally four
                                     spaces. Pressing Tab in the editor inserts four spaces.
                                 </li>
                                 <li><strong><code>RuntimeError: Wall ahead</code>:</strong>
@@ -447,8 +460,8 @@ print("Reached the goal!")</code></pre>
                             </p>
                             <p>
                                 The activity stops such a program with a
-                                <code>StepLimitError</code>, but that is only a safety net —
-                                it is not how a good solver knows it is lost. To get past
+                                <code>StepLimitError</code>, but that is only a safety
+                                net, not how a good solver knows it is lost. To get past
                                 this you need <em>memory</em>: some record of where the
                                 triangle has already been, so it can rule those routes out
                                 and back up to the last untried junction. Try the wall
@@ -484,30 +497,27 @@ print("Reached the goal!")</code></pre>
                         <div class="tab-section">
                             <p><strong>Going further: give the triangle a memory</strong></p>
                             <p>
-                                The triangle cannot ask where it is — but your program can
-                                keep track for itself. Start at <code>0, 0</code> and update
-                                the position every time you move, and the direction every
-                                time you turn. This is called <em>dead reckoning</em>.
+                                <code>position()</code> tells you which square you are on.
+                                Keep every square you have visited in a
+                                <code>set</code>, and your program can tell the difference
+                                between new ground and a route it has already walked.
                             </p>
-                            <pre><code>x = 0
-y = 0
-facing = 0          # 0 right, 1 down, 2 left, 3 up
-steps = [(1, 0), (0, 1), (-1, 0), (0, -1)]
+                            <pre><code>visited = set()
 
-def forward():
-    global x, y
-    move()
-    x = x + steps[facing][0]
-    y = y + steps[facing][1]
-    print(x, y)</code></pre>
+while not at_goal():
+    visited.add(position())
+    print(len(visited), "squares seen")
+    ...</code></pre>
                             <p>
-                                Call <code>forward()</code> instead of <code>move()</code>
-                                and your program always knows where it is. Store each
-                                position you visit in a <code>visited</code> set, prefer
-                                squares you have not seen, and you have the memory that
-                                wall following lacks — enough to take on Hard and Expert.
+                                That is the missing ingredient. Prefer a direction whose
+                                square is not in <code>visited</code>, remember the way
+                                you came so you can back out of a dead end, and you have a
+                                solver that copes with loops, pillars and open ground.
+                                It is more work than wall following, and it is the only
+                                approach here that survives every difficulty.
                             </p>
                         </div>
+
                     </section>
                 </div>
             </div>
@@ -593,12 +603,15 @@ def forward():
     </div>
 
     <div class="tutorial-navigation">
-        <button id="tutorialCloseBtn" type="button">Close tutorial</button>
-        <button id="tutorialMinimizeBtn" type="button"
-                aria-label="Minimize tutorial">Minimize</button>
-        <span class="tutorial-navigation-spacer"></span>
-        <button id="tutorialBackBtn" type="button">Back</button>
-        <button id="tutorialNextBtn" type="button">Continue</button>
+        <div class="tutorial-navigation-group">
+            <button id="tutorialCloseBtn" type="button">Close</button>
+            <button id="tutorialMinimizeBtn" type="button"
+                    aria-label="Minimize tutorial">Minimize</button>
+        </div>
+        <div class="tutorial-navigation-group">
+            <button id="tutorialBackBtn" type="button">Back</button>
+            <button id="tutorialNextBtn" type="button">Continue</button>
+        </div>
     </div>
 </section>
 

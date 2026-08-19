@@ -545,15 +545,6 @@ function setMazeStatus(message, isError = false) {
     mazeStatus.classList.toggle("error", isError);
 }
 
-function clearMazeChoicePrompt() {
-    document.getElementById("mazeControls").classList.remove("maze-controls-prompt");
-}
-
-function showMazeChoicePrompt() {
-    document.getElementById("mazeControls").classList.add("maze-controls-prompt");
-    setMazeStatus("Pick a different maze here when you are ready.");
-}
-
 function setMazeControlsEnabled(enabled) {
     document.getElementById("mazeSelect").disabled = !enabled;
     document.getElementById("generateMazeBtn").disabled = !enabled;
@@ -593,7 +584,6 @@ async function loadPresetMaze(level) {
     const config = MAZE_LEVELS[level];
     if (!config) return;
 
-    clearMazeChoicePrompt();
     const changeId = ++mazeChangeCounter;
     setMazeChangeInProgress(true);
     setMazeStatus(`Loading ${config.label.toLowerCase()}…`);
@@ -620,7 +610,6 @@ async function generateNewMaze(level = currentMazeLevel) {
     const config = MAZE_LEVELS[generatedLevel];
     if (!config) return;
 
-    clearMazeChoicePrompt();
     const changeId = ++mazeChangeCounter;
     setMazeChangeInProgress(true);
     setMazeStatus(`Generating a new ${config.label.toLowerCase()} maze…`);
@@ -813,7 +802,6 @@ document.getElementById("generateMazeBtn").addEventListener("click", () => {
 // learner can choose when and how to move on to another maze.
 document.addEventListener("tutorial:start", () => {
     tutorialAnimationActive = true;
-    clearMazeChoicePrompt();
     if (currentMazeLevel !== "tutorial") loadPresetMaze("tutorial");
 });
 
@@ -825,7 +813,6 @@ document.addEventListener("tutorial:complete", async () => {
     if (currentMazeLevel !== "tutorial") {
         await loadPresetMaze("tutorial");
     }
-    if (currentMazeLevel === "tutorial") showMazeChoicePrompt();
 });
 
 /*

@@ -12,31 +12,41 @@ const tutorialDefinitions = {
         label: "New to coding",
         steps: [
             {
-                target: "#runBtn",
-                title: "Press Run and see what happens",
+                target: "#mazeCanvas",
+                title: "This is the maze",
                 body: `
-                    <p>There is a program in the editor already. Nobody expects you
-                    to understand it yet.</p>
-                    <p>Press <strong>Run program</strong> and watch the blue
-                    triangle.</p>
-                    <p>Button greyed out? Python is still starting up — it takes a
-                    few seconds the first time.</p>
+                    <p>The blue triangle starts here, facing right. The green square
+                    is where it has to end up.</p>
+                    <p>You will not steer it by hand. You will write instructions,
+                    and the computer will follow them exactly.</p>
                 `,
-                code: "move()\nmove()\nmove()",
-                autoInsert: true,
-                requiresRun: true,
-                validate: result => !result.hadError && countActions(result, "move") >= 1,
-                failure: "The triangle did not move. Put move() back in the editor, one per line, and press Run program again.",
             },
             {
                 target: "#code",
-                title: "That was a program",
+                title: "Instructions go here",
                 body: `
-                    <p>Three instructions. The computer obeyed them exactly, in
-                    order, top to bottom.</p>
-                    <p><code>move()</code> is a <strong>function</strong>: a job with
-                    a name. The brackets mean <em>do it now</em>.</p>
+                    <p>There are three in the editor already.</p>
+                    <p><code>move()</code> means go forward one square. It is a
+                    <strong>function</strong>: a job with a name, and the brackets
+                    tell Python to do it now.</p>
+                    <p>Python runs them in order, top to bottom.</p>
                 `,
+                code: "move()\nmove()\nmove()",
+                autoInsert: true,
+            },
+            {
+                target: "#runBtn",
+                title: "Now run it",
+                alsoHighlight: ["#code"],
+                body: `
+                    <p>Press <strong>Run program</strong> and watch the triangle move
+                    three squares.</p>
+                    <p>If the button is greyed out, Python is still starting up. It
+                    takes a few seconds the first time.</p>
+                `,
+                requiresRun: true,
+                validate: result => !result.hadError && countActions(result, "move") >= 1,
+                failure: "The triangle did not move. Put move() back in the editor, one per line, and press Run program again.",
             },
             {
                 target: "#buttons",
@@ -62,6 +72,7 @@ const tutorialDefinitions = {
             {
                 target: "#runBtn",
                 title: "Run the sequence",
+                alsoHighlight: ["#code"],
                 body: `
                     <p>Press <strong>Run program</strong>. The triangle should turn
                     downwards, move two squares, and print your message.</p>
@@ -99,6 +110,7 @@ const tutorialDefinitions = {
             {
                 target: "#runBtn",
                 title: "Run the decision",
+                alsoHighlight: ["#code"],
                 body: `
                     <p>The way ahead is open, so the answer is <code>True</code> and
                     the triangle moves.</p>
@@ -114,13 +126,14 @@ const tutorialDefinitions = {
                 body: `
                     <p><code>while</code> repeats its indented block for as long as
                     the answer stays <code>True</code>.</p>
-                    <p>Two lines, many moves. You never say how many.</p>
+                    <p>Two lines produce many moves, and you never say how many.</p>
                 `,
                 code: "while path_ahead():\n    move()",
             },
             {
                 target: "#runBtn",
                 title: "Run the loop",
+                alsoHighlight: ["#code"],
                 body: `
                     <p>Press <strong>Run program</strong>. The triangle runs down the
                     corridor and stops itself at the wall.</p>
@@ -132,11 +145,12 @@ const tutorialDefinitions = {
             {
                 target: "#runBtn",
                 title: "Keep one hand on the wall",
+                alsoHighlight: ["#code"],
                 body: `
                     <p>A rule that works in a real maze: <strong>turn right if you
                     can; otherwise go straight; otherwise turn left.</strong></p>
-                    <p><code>elif</code> means "otherwise, if" — Python takes the
-                    first branch that fits. Run one round.</p>
+                    <p><code>elif</code> means "otherwise, if". Python takes the first
+                    branch that fits. Run one round.</p>
                 `,
                 code: RIGHT_HAND_ROUND,
                 requiresRun: true,
@@ -154,7 +168,7 @@ const tutorialDefinitions = {
                     <p>You now have both halves. The rule you just ran chooses one
                     action; a loop repeats it.</p>
                     <p><code>at_goal()</code> is <code>True</code> only on the green
-                    square, and <code>not</code> flips it — so
+                    square, and <code>not</code> flips it, so
                     <code>while not at_goal():</code> keeps going until you arrive.
                     Put the rule inside it, indented.</p>
                     <p>Have a go. If you get stuck, the <strong>Beginner Guide</strong>
@@ -169,16 +183,29 @@ const tutorialDefinitions = {
         label: "New to Python",
         steps: [
             {
-                target: "#runBtn",
-                title: "The whole API",
+                target: "#mazeCanvas",
+                title: "The task and the API",
                 body: `
+                    <p>Get the triangle from its start to the green goal. It faces
+                    right, and every run resets its position.</p>
                     <p>Act with <code>move()</code>, <code>turn_left()</code>,
-                    <code>turn_right()</code>. Ask with <code>path_ahead()</code>,
+                    <code>turn_right()</code>. Check with <code>path_ahead()</code>,
                     <code>path_left()</code>, <code>path_right()</code>,
-                    <code>path_behind()</code>, <code>at_goal()</code>.</p>
-                    <p>The questions return <code>True</code> or <code>False</code>
-                    and change nothing. Everything is relative to the way the triangle
-                    faces. Press <strong>Run program</strong>.</p>
+                    <code>path_behind()</code>, <code>at_goal()</code>.
+                    <code>position()</code> gives the current
+                    <code>(row, column)</code>.</p>
+                    <p>The checks return <code>True</code> or <code>False</code> and
+                    change nothing. Everything is relative to the way the triangle
+                    faces.</p>
+                `,
+            },
+            {
+                target: "#code",
+                title: "Try them",
+                alsoHighlight: ["#runBtn"],
+                body: `
+                    <p>This prints three checks, then moves. Run it and read what
+                    comes back.</p>
                 `,
                 code: "print(path_ahead(), path_right(), at_goal())\nmove()",
                 autoInsert: true,
@@ -200,13 +227,12 @@ const tutorialDefinitions = {
                 target: "#code",
                 title: "Python, not C or Java",
                 body: `
-                    <p>No braces, no semicolons. A colon opens a block and
-                    <strong>indentation is the syntax</strong> — four spaces here, and
+                    <p>No braces, no semicolons. A colon opens a block, and
+                    <strong>indentation is the syntax</strong>: four spaces here, and
                     Tab inserts them.</p>
                     <p><code>True</code> and <code>False</code> are capitalised. Use
                     <code>and</code>, <code>or</code>, <code>not</code> rather than
-                    <code>&amp;&amp;</code>, <code>||</code>, <code>!</code>. Names are
-                    <code>snake_case</code>.</p>
+                    <code>&amp;&amp;</code>, <code>||</code>, <code>!</code>.</p>
                 `,
             },
             {
@@ -235,7 +261,7 @@ const tutorialDefinitions = {
                     <code>while not at_goal():</code> repeats until the triangle
                     stands on the goal.</p>
                     <p>Those same three branches, indented inside that loop, are a
-                    right-hand wall follower. Write it yourself — or take
+                    right-hand wall follower. Write it yourself, or take
                     <strong>Load sample</strong> if you would rather skip ahead to
                     breaking it.</p>
                 `,
@@ -276,10 +302,11 @@ const tutorialDefinitions = {
                     <ul>
                         <li>Act: <code>move()</code>, <code>turn_left()</code>,
                         <code>turn_right()</code></li>
-                        <li>Inspect: <code>path_ahead()</code>,
+                        <li>Check: <code>path_ahead()</code>,
                         <code>path_behind()</code>, <code>path_left()</code>,
                         <code>path_right()</code></li>
                         <li>Finish condition: <code>at_goal()</code></li>
+                        <li>Where you are: <code>position()</code></li>
                     </ul>
                     <p><strong>Load sample</strong>, below the editor, replaces the
                     contents with a complete solver.</p>
@@ -320,11 +347,11 @@ const tutorialDefinitions = {
                 target: "#mazeControls",
                 title: "Choose or generate a maze",
                 body: `
-                    <p>The <strong>Maze</strong> menu loads a fixed difficulty or
-                    special type. <strong>Generate new maze</strong> creates a fresh
-                    layout for the selected type.</p>
+                    <p>The <strong>Maze</strong> menu loads a difficulty or one of
+                    the extra challenges. <strong>Generate new maze</strong> creates a
+                    fresh layout of whichever one you are on.</p>
                     <p>The tutorial maze stays loaded when this guidance closes, so
-                    change it only when you are ready.</p>
+                    change it when you are ready.</p>
                 `,
                 final: true,
             },
@@ -357,6 +384,8 @@ let currentStepIndex = 0;
 let tutorialIsOpen = false;
 let tutorialIsMinimized = false;
 let highlightedElement = null;
+/* Every element lit up for this step: the target plus any extras. */
+let highlightedElements = [];
 let resumeAfterSelector = false;
 let closeConfirmPending = false;
 
@@ -384,10 +413,11 @@ function setFeedback(message, state = "") {
 }
 
 function clearHighlight() {
-    if (highlightedElement) {
-        highlightedElement.classList.remove("tutorial-highlight");
-        highlightedElement = null;
-    }
+    highlightedElements.forEach(element => {
+        element.classList.remove("tutorial-highlight");
+    });
+    highlightedElements = [];
+    highlightedElement = null;
 }
 
 function clearRunningMazeHighlight() {
@@ -408,12 +438,31 @@ function updateStatus(completed = false) {
     if (!tutorial) return;
 
     if (completed) {
-        status.textContent = `${tutorial.label} — guidance closed; working independently`;
+        status.textContent = `${tutorial.label}: closed. You are working on your own now.`;
     } else if (tutorialIsMinimized) {
-        status.textContent = `${tutorial.label} — minimized at ${currentStepIndex + 1} of ${tutorial.steps.length}`;
+        status.textContent = `${tutorial.label}: minimized at step ${currentStepIndex + 1} of ${tutorial.steps.length}`;
     } else {
-        status.textContent = `${tutorial.label} — ${currentStepIndex + 1} of ${tutorial.steps.length}`;
+        status.textContent = `${tutorial.label}: step ${currentStepIndex + 1} of ${tutorial.steps.length}`;
     }
+}
+
+/* The box enclosing every highlighted element for this step. */
+function highlightedArea() {
+    const boxes = highlightedElements.map(element =>
+        element.getBoundingClientRect(),
+    );
+    return {
+        top: Math.min(...boxes.map(box => box.top)),
+        bottom: Math.max(...boxes.map(box => box.bottom)),
+        left: Math.min(...boxes.map(box => box.left)),
+        right: Math.max(...boxes.map(box => box.right)),
+        get width() {
+            return this.right - this.left;
+        },
+        get height() {
+            return this.bottom - this.top;
+        },
+    };
 }
 
 function positionCoachmark() {
@@ -426,7 +475,7 @@ function positionCoachmark() {
     }
 
     const margin = 14;
-    const target = highlightedElement.getBoundingClientRect();
+    const target = highlightedArea();
     const card = coachmark.getBoundingClientRect();
     const centredX = target.left + (target.width - card.width) / 2;
     const centredY = target.top + (target.height - card.height) / 2;
@@ -487,12 +536,32 @@ function showCoachmark() {
         return;
     }
 
+    /*
+      Only highlighted elements are raised above the backdrop, so anything the
+      learner has to click has to be lit. A step that waits for a run always
+      lights the Run button for that reason, whether or not it is the element
+      the card is pointing at: without it the button is dimmed and a real
+      mouse click lands on the backdrop instead.
+    */
+    const extras = [...(step.alsoHighlight || [])];
+    if (step.requiresRun) extras.push("#runBtn");
+
+    highlightedElements = [highlightedElement];
+    extras.forEach(selector => {
+        const extra = document.querySelector(selector);
+        if (extra && !highlightedElements.includes(extra)) {
+            highlightedElements.push(extra);
+        }
+    });
+
     const narrowScreen = window.matchMedia("(max-width: 600px)").matches;
     highlightedElement.scrollIntoView({
         block: narrowScreen ? "start" : "center",
         inline: "nearest",
     });
-    highlightedElement.classList.add("tutorial-highlight");
+    highlightedElements.forEach(element => {
+        element.classList.add("tutorial-highlight");
+    });
 
     backdrop.hidden = false;
     coachmark.hidden = false;
@@ -680,7 +749,7 @@ nextButton.addEventListener("click", () => {
 function resetCloseConfirmation() {
     if (!closeConfirmPending) return;
     closeConfirmPending = false;
-    closeTutorialButton.textContent = "Close tutorial";
+    closeTutorialButton.textContent = "Close";
 }
 
 closeTutorialButton.addEventListener("click", () => {

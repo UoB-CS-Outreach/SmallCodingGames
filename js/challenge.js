@@ -22,8 +22,9 @@
 
     /*
       maxSteps is per maze, and is measured rather than guessed. A solver that
-      remembers where it has been — the strategy these difficulties are meant
-      to reward — solves all 25 mazes of every tier, and its worst run costs:
+      remembers where it has been, which is the strategy these difficulties
+      are meant to reward, solves all 25 mazes of every tier. Its worst run
+      costs:
 
           Easy 5,227 · Medium 14,236 · Hard 26,979
           Expert 44,084 · Plaza 58,371 · Marathon 88,905 executed lines
@@ -128,9 +129,8 @@
         panel.appendChild(createElement(
             "p",
             "challenge-intro",
-            `Does your program really work, or did it just get lucky? This runs ` +
-            `it against ${TOTAL_MAZES} fresh mazes and stops at the first one it ` +
-            "cannot solve.",
+            `Runs the program in the editor against ${TOTAL_MAZES} freshly ` +
+            "generated mazes and stops at the first one it cannot solve.",
         ));
 
         const actions = createElement("div", "challenge-actions");
@@ -299,12 +299,12 @@
     /* Explain a failure in the terms the activity uses, not in Python terms. */
     function describeFailure(result) {
         if (result.reason === "stuck") {
-            const laps = Math.round(result.moves / Math.max(1, result.shortest));
+            const times = Math.round(result.moves / Math.max(1, result.shortest));
             return (
-                `It walked ${result.moves.toLocaleString()} moves without finding ` +
-                `the goal — about ${laps} times the length of the shortest route ` +
-                `(${result.shortest} moves). It is retracing the same loop, and ` +
-                "nothing it can see tells it that it has been there before."
+                `It made ${result.moves.toLocaleString()} moves without reaching ` +
+                `the goal, roughly ${times} times the ${result.shortest} moves the ` +
+                "shortest route needs, and was still going when the run was cut " +
+                "short. Load the maze below to see what it is doing."
             );
         }
         if (result.reason === "error") {

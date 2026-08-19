@@ -114,6 +114,15 @@ class PlayerMovementTests(MazeApiTestCase):
         self.assertTrue(self.maze.path_ahead())
         self.assertTrue(self.maze.path_left())
 
+    def test_position_reports_the_current_square(self):
+        self.assertEqual(self.maze.position(), (1, 1))
+
+        self.maze.move()
+
+        self.assertEqual(self.maze.position(), (1, 2))
+        # Reporting where it is must not move it or animate anything.
+        self.assertEqual(self.js.actions, ["move"])
+
     def test_at_goal_is_only_true_on_the_goal_square(self):
         self.assertFalse(self.maze.at_goal())
 
